@@ -33,9 +33,9 @@ def to_park(feature: dict[str, Any]) -> Park:
         properties["location"],
         properties["zip"],
         properties["acres"],
-        properties["ward"],
+        properties["ward"].removesuffix(".0"),
         properties["park_class"],
-        properties["park_class"],
+        properties["label"],
         y,
         x,
     )
