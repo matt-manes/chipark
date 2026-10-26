@@ -13,3 +13,4 @@ class Park:
     label: str
     lat: float
     lon: float
+    park_id: int = -1

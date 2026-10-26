@@ -1,10 +1,8 @@
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.append(str(Path.cwd()))
-from backend.models.park import Park
+from ..models.park import Park
 
 DEFAULT_PATH: Path = (
     Path(__file__).parent.parent / "data" / "CPD_Parks_20261019.geojson"
