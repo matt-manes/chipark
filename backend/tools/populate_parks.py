@@ -8,9 +8,9 @@ class ParkDatabasePopulator:
     def __init__(self) -> None:
         self._database: SqliteDatabase = SqliteDatabase()
         self._data_service: DataService = DataService(self._database)
-        self._park_nos: set[str] = set(
-            [park.park_no for park in self._data_service.get_parks()]
-        )
+        self._park_nos: set[str] = {
+            park.park_no for park in self._data_service.get_parks()
+        }
         self._starting_count: int = len(self._park_nos)
 
     def populate(self) -> int:
