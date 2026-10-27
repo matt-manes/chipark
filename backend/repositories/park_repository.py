@@ -8,10 +8,33 @@ from .entities import ParkRecord
 
 
 class ParkRepository:
+    """Persist and retrieve parks using a SQLAlchemy session factory."""
+
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
+        """
+        Create a repository using the given session factory.
+
+        Parameters
+        ----------
+        session_factory : sessionmaker[Session]
+            Factory bound to the database where park records are stored.
+        """
         self._session_factory: sessionmaker[Session] = session_factory
 
     def add(self, park: Park) -> Park:
+        """
+        Persist a park and return it with its database identifier.
+
+        Parameters
+        ----------
+        park : Park
+            Park to add.
+
+        Returns
+        -------
+        Park
+            Persisted park model.
+        """
         with self._session_factory.begin() as session:
             record = ParkRecord(
                 park_id=park.park_id if park.park_id >= 0 else None,
@@ -31,6 +54,14 @@ class ParkRepository:
             return self._to_model(record)
 
     def get_all(self) -> list[Park]:
+        """
+        Retrieve all parks ordered by database identifier.
+
+        Returns
+        -------
+        list[Park]
+            Persisted parks in identifier order.
+        """
         with self._session_factory() as session:
             records: Sequence[ParkRecord] = session.scalars(
                 select(ParkRecord).order_by(ParkRecord.park_id)
@@ -39,6 +70,19 @@ class ParkRepository:
 
     @staticmethod
     def _to_model(record: ParkRecord) -> Park:
+        """
+        Convert a database record to a park model.
+
+        Parameters
+        ----------
+        record : ParkRecord
+            Database record to convert.
+
+        Returns
+        -------
+        Park
+            Park model represented by the record.
+        """
         return Park(
             park_no=record.park_no,
             name=record.name,

@@ -5,7 +5,10 @@ from .park_loader import load_from_geojson
 
 
 class ParkDatabasePopulator:
+    """Load park features and insert parks that are not already stored."""
+
     def __init__(self) -> None:
+        """Create the SQLite-backed data service used for population."""
         self._database: SqliteDatabase = SqliteDatabase()
         self._data_service: DataService = DataService(self._database)
         self._park_nos: set[str] = {
@@ -14,6 +17,14 @@ class ParkDatabasePopulator:
         self._starting_count: int = len(self._park_nos)
 
     def populate(self) -> int:
+        """
+        Insert parks from the default GeoJSON source that are not already stored.
+
+        Returns
+        -------
+        int
+            Number of parks inserted during this run.
+        """
         try:
             parks: list[Park] = load_from_geojson()
             self._data_service.add_parks(

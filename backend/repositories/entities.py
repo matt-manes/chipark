@@ -8,10 +8,12 @@ from ..models.ticket import TicketStatus
 
 
 class Base(DeclarativeBase):
-    pass
+    """Base class for SQLAlchemy table mappings."""
 
 
 class ParkRecord(Base):
+    """Map park model fields to the ``parks`` table."""
+
     __tablename__: str = "parks"
 
     park_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -28,6 +30,8 @@ class ParkRecord(Base):
 
 
 class TicketRecord(Base):
+    """Map ticket model fields to the ``tickets`` table."""
+
     __tablename__: str = "tickets"
 
     ticket_id: Mapped[int] = mapped_column(

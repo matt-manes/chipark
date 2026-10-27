@@ -8,10 +8,33 @@ from .entities import TicketRecord
 
 
 class TicketRepository:
+    """Persist and retrieve tickets using a SQLAlchemy session factory."""
+
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
+        """
+        Create a repository using the given session factory.
+
+        Parameters
+        ----------
+        session_factory : sessionmaker[Session]
+            Factory bound to the database where ticket records are stored.
+        """
         self._session_factory: sessionmaker[Session] = session_factory
 
     def add(self, ticket: Ticket) -> Ticket:
+        """
+        Persist a ticket and return it with its database identifier.
+
+        Parameters
+        ----------
+        ticket : Ticket
+            Ticket to add.
+
+        Returns
+        -------
+        Ticket
+            Persisted ticket model.
+        """
         with self._session_factory.begin() as session:
             record = TicketRecord(
                 ticket_id=ticket.ticket_id if ticket.ticket_id >= 0 else None,
@@ -26,6 +49,24 @@ class TicketRepository:
             return self._to_model(record)
 
     def get(self, ticket_id: int) -> Ticket:
+        """
+        Retrieve a ticket by its database identifier.
+
+        Parameters
+        ----------
+        ticket_id : int
+            Identifier of the ticket to retrieve.
+
+        Returns
+        -------
+        Ticket
+            Matching persisted ticket.
+
+        Raises
+        ------
+        LookupError
+            If no ticket has the requested identifier.
+        """
         with self._session_factory() as session:
             record: TicketRecord | None = session.get(TicketRecord, ticket_id)
             if record is None:
@@ -33,6 +74,14 @@ class TicketRepository:
             return self._to_model(record)
 
     def get_all(self) -> list[Ticket]:
+        """
+        Retrieve all tickets ordered by database identifier.
+
+        Returns
+        -------
+        list[Ticket]
+            Persisted tickets in identifier order.
+        """
         with self._session_factory() as session:
             records: Sequence[TicketRecord] = session.scalars(
                 select(TicketRecord).order_by(TicketRecord.ticket_id)
@@ -40,6 +89,24 @@ class TicketRepository:
             return [self._to_model(record) for record in records]
 
     def close(self, ticket_id: int) -> Ticket:
+        """
+        Mark a ticket as closed and return the updated model.
+
+        Parameters
+        ----------
+        ticket_id : int
+            Identifier of the ticket to close.
+
+        Returns
+        -------
+        Ticket
+            Updated ticket with closed status.
+
+        Raises
+        ------
+        LookupError
+            If no ticket has the requested identifier.
+        """
         with self._session_factory.begin() as session:
             record: TicketRecord | None = session.get(TicketRecord, ticket_id)
             if record is None:
@@ -50,6 +117,19 @@ class TicketRepository:
 
     @staticmethod
     def _to_model(record: TicketRecord) -> Ticket:
+        """
+        Convert a database record to a ticket model.
+
+        Parameters
+        ----------
+        record : TicketRecord
+            Database record to convert.
+
+        Returns
+        -------
+        Ticket
+            Ticket model represented by the record.
+        """
         return Ticket(
             park_name=record.park_name,
             status=record.status,
