@@ -9,6 +9,20 @@ DEFAULT_PATH: Path = Path(__file__).parent.parent / "data" / "synthetic-tickets.
 
 
 def to_ticket(data: dict[str, Any]) -> Ticket:
+    """
+    Convert a JSON ticket record into a ticket model.
+
+    Parameters
+    ----------
+    data : dict[str, Any]
+        Ticket fields, with status as ``"OPEN"`` or ``"CLOSED"`` and the
+        filing date as an ISO-formatted string.
+
+    Returns
+    -------
+    Ticket
+        Ticket model populated from the record.
+    """
     return Ticket(
         data["park_name"],
         TicketStatus.OPEN if data["status"] == "OPEN" else TicketStatus.CLOSED,
@@ -19,5 +33,18 @@ def to_ticket(data: dict[str, Any]) -> Ticket:
 
 
 def load_from_json(path: Path = DEFAULT_PATH) -> list[Ticket]:
+    """
+    Load ticket models from a JSON file.
+
+    Parameters
+    ----------
+    path : Path, default=DEFAULT_PATH
+        Path to the JSON file containing a list of ticket records.
+
+    Returns
+    -------
+    list[Ticket]
+        Ticket models converted from the file's records.
+    """
     data: list[dict[str, Any]] = json.loads(path.read_text())
     return [to_ticket(datum) for datum in data]
