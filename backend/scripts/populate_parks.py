@@ -37,6 +37,10 @@ class ParkDatabasePopulator:
             self._database.close()
 
 
-if __name__ == "__main__":
+def main() -> None:
     inserted_count: int = ParkDatabasePopulator().populate()
     print(f"Inserted {inserted_count} parks")
+
+
+if __name__ == "__main__":
+    main()
