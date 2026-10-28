@@ -1,12 +1,26 @@
 from collections.abc import Sequence
+from typing import Self
+
+from backend.tools.config import Config
 
 from ..models.park import Park
 from ..models.ticket import Ticket
-from ..repositories import Database, ParkRepository, TicketRepository
+from ..repositories import Database, DatabaseFactory, ParkRepository, TicketRepository
 
 
 class DataService:
     """Expose park and ticket operations through their repositories."""
+
+    @classmethod
+    def get_default_service(cls) -> Self:
+        """
+        Returns a DataService instance backed by whatever database is specified in the config.toml/environment.
+
+        Returns
+        -------
+        DataService
+        """
+        return cls(DatabaseFactory.get_database(Config().database))
 
     def __init__(self, database: Database) -> None:
         """
