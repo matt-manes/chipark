@@ -2,8 +2,9 @@ from backend.repositories import Database
 from backend.tools.ticket_loader import load_from_json
 
 from ..models.ticket import Ticket
-from ..repositories.sqlite_database import SqliteDatabase
+from ..repositories.database_factory import DatabaseFactory
 from ..services.data_service import DataService
+from ..tools.config import Config
 
 
 class TicketDatabasePopulator:
@@ -11,7 +12,7 @@ class TicketDatabasePopulator:
 
     def __init__(self) -> None:
         """Create the database service used to populate ticket records."""
-        self._database: Database = SqliteDatabase()
+        self._database: Database = DatabaseFactory.get_database(Config().database)
         self._data_service: DataService = DataService(self._database)
         self._starting_count: int = len(self._data_service.get_tickets())
 

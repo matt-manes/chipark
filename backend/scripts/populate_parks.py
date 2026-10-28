@@ -1,8 +1,9 @@
 from backend.repositories import Database
 
 from ..models.park import Park
-from ..repositories.sqlite_database import SqliteDatabase
+from ..repositories.database_factory import DatabaseFactory
 from ..services.data_service import DataService
+from ..tools.config import Config
 from ..tools.park_loader import load_from_geojson
 
 
@@ -11,7 +12,7 @@ class ParkDatabasePopulator:
 
     def __init__(self) -> None:
         """Create the database-backed data service used for population."""
-        self._database: Database = SqliteDatabase()
+        self._database: Database = DatabaseFactory.get_database(Config().database)
         self._data_service: DataService = DataService(self._database)
         self._park_nos: set[str] = {
             park.park_no for park in self._data_service.get_parks()
