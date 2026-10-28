@@ -5,7 +5,7 @@ import tomllib
 from dataclasses import dataclass, fields
 from pathlib import Path
 from threading import Lock
-from typing import ClassVar, get_type_hints
+from typing import ClassVar, Self, get_type_hints
 
 CONFIG_PATH: Path = Path(__file__).resolve().parent.parent / "config.toml"
 
@@ -28,12 +28,12 @@ class Config:
     immutable after initialization.
     """
 
-    _instance: ClassVar[Config | None] = None
+    _instance: ClassVar[Self | None] = None
     _lock: ClassVar[Lock] = Lock()
 
     database: str
 
-    def __new__(cls) -> Config:
+    def __new__(cls) -> Self:
         """
         Return the shared configuration instance.
 
