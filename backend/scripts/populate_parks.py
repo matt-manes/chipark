@@ -1,7 +1,7 @@
 from ..models.park import Park
 from ..repositories.sqlite_database import SqliteDatabase
 from ..services.data_service import DataService
-from .park_loader import load_from_geojson
+from ..tools.park_loader import load_from_geojson
 
 
 class ParkDatabasePopulator:
