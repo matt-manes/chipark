@@ -12,10 +12,10 @@ class Park:
         Source park identifier.
     name : str
         Park name.
-    street : str
-        Street address or location description.
-    zip_code : str
-        Postal code.
+    street : str or None
+        Street address or location description, if available.
+    zip_code : str or None
+        Postal code, if available.
     acres : str
         Park area in acres.
     ward : str
@@ -34,8 +34,8 @@ class Park:
 
     park_no: str
     name: str
-    street: str
-    zip_code: str
+    street: str | None
+    zip_code: str | None
     acres: str
     ward: str
     park_class: str

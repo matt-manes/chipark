@@ -1,3 +1,4 @@
+from datetime import datetime
 from html import escape
 from typing import Annotated
 
@@ -94,7 +95,7 @@ def add_ticket(
     ticket: Ticket = Ticket(
         park_name=ticket_submission.park_name,
         status=TicketStatus.OPEN,
-        file_date=ticket_submission.file_date,
+        file_date=datetime.now(),
         estimated_hours=ticket_submission.estimated_hours,
         issue=escape(ticket_submission.issue),
     )

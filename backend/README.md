@@ -22,3 +22,7 @@ The `backend.repositories` package provides SQLite-backed repositories for the
 `Park` and `Ticket` models. By default, `SqliteDatabase` stores data in
 `backend/data/chipark.sqlite3`; pass a path or `":memory:"` to select another
 database.
+
+The workspace MCP server is configured in the repository-root `.mcp.json`. It
+provides tools to list the available tools, list parks and tickets, retrieve a
+park by ID, and submit a ticket for an existing park.
