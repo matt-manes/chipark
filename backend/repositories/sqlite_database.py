@@ -1,7 +1,9 @@
 from pathlib import Path
 
-from sqlalchemy import URL, create_engine
+from sqlalchemy import URL, create_engine, event
 from sqlalchemy.engine import Engine
+from sqlalchemy.engine.interfaces import DBAPIConnection, DBAPICursor
+from sqlalchemy.pool import ConnectionPoolEntry
 
 from .database import Database
 
@@ -40,4 +42,27 @@ class SqliteDatabase(Database):
             resolved_path: Path = Path(self._database_path)
             resolved_path.parent.mkdir(parents=True, exist_ok=True)
             url = URL.create("sqlite", database=str(resolved_path.resolve()))
-        return create_engine(url)
+        engine: Engine = create_engine(url)
+        event.listen(engine, "connect", self._enable_foreign_keys)
+        return engine
+
+    @staticmethod
+    def _enable_foreign_keys(
+        dbapi_connection: DBAPIConnection,
+        connection_record: ConnectionPoolEntry,
+    ) -> None:
+        """
+        Enable foreign-key enforcement on each SQLite connection.
+
+        Parameters
+        ----------
+        dbapi_connection : DBAPIConnection
+            Newly created SQLite DB-API connection.
+        connection_record : ConnectionPoolEntry
+            SQLAlchemy connection pool entry for the connection.
+        """
+        cursor: DBAPICursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA foreign_keys=ON")
+        finally:
+            cursor.close()
