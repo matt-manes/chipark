@@ -7,14 +7,18 @@ name = "backend"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
+    "black>=26.10.1",
     "coverage>=7.17.0",
     "fastapi[standard-no-fastapi-cloud-cli]>=0.162.0",
+    "isort>=9.0.2",
     "pytest>=9.1.1",
+    "ruff>=0.17.3",
     "sqlalchemy>=2.1.6",
 ]
 
 [project.scripts]
 coverage-suite = "scripts.run_coverage:main"
+quality-checks = "scripts.run_quality_checks:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["scripts"]
