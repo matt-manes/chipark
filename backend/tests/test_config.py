@@ -1,9 +1,20 @@
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 
 from backend.tools import config as config_module
-from backend.tools.config import Config, ConfigError
+from backend.tools.config import Config, ConfigError, EnvValueParser
+
+
+@dataclass(frozen=True, init=False)
+class BooleanConfig(Config):
+    enabled: bool
+
+
+@dataclass(frozen=True, init=False)
+class UnsupportedTypeConfig(Config):
+    options: list[str]
 
 
 @pytest.fixture(autouse=True)
@@ -64,10 +75,60 @@ def test_raises_when_field_is_missing_from_toml_and_environment(
 
 
 def test_rejects_invalid_environment_value_for_boolean_field() -> None:
-    with pytest.raises(ConfigError, match="invalid value"):
-        Config._parse_environment_value("enabled", "yes", bool)  # type: ignore
+    with pytest.raises(ValueError, match="true.*false"):
+        EnvValueParser.parse("yes", bool)
+
+
+def test_config_wraps_invalid_environment_value_with_field_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config_path: Path = tmp_path / "config.toml"
+    config_path.write_text('database = "sqlite"\n', encoding="utf-8")
+    monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
+    monkeypatch.setenv("enabled", "yes")
+
+    with pytest.raises(ConfigError, match="enabled.*invalid value"):
+        BooleanConfig()
+
+
+def test_config_wraps_unsupported_environment_type_with_field_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config_path: Path = tmp_path / "config.toml"
+    config_path.write_text('database = "sqlite"\n', encoding="utf-8")
+    monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
+    monkeypatch.setenv("options", "value")
+
+    with pytest.raises(ConfigError, match="options.*unsupported type"):
+        UnsupportedTypeConfig()
+
+
+@pytest.mark.parametrize(
+    ("raw_value", "expected_value"),
+    [("true", True), ("TRUE", True), ("false", False), ("FALSE", False)],
+)
+def test_parses_boolean_environment_values(
+    raw_value: str, expected_value: bool
+) -> None:
+    parsed_value: object = EnvValueParser.parse(raw_value, bool)
+
+    assert parsed_value is expected_value
+
+
+def test_parses_integer_environment_value() -> None:
+    parsed_value: object = EnvValueParser.parse("5432", int)
+
+    assert parsed_value == 5432
+    assert isinstance(parsed_value, int)
+
+
+def test_parses_float_environment_value() -> None:
+    parsed_value: object = EnvValueParser.parse("2.75", float)
+
+    assert parsed_value == 2.75
+    assert isinstance(parsed_value, float)
 
 
 def test_rejects_unsupported_environment_field_type() -> None:
-    with pytest.raises(ConfigError, match="unsupported type"):
-        Config._parse_environment_value("options", "value", list)  # type: ignore
+    with pytest.raises(TypeError, match="Unsupported environment field type"):
+        EnvValueParser.parse("value", list)

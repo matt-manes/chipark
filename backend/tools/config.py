@@ -14,6 +14,49 @@ class ConfigError(ValueError):
     """Error raised when application configuration is missing or invalid."""
 
 
+class EnvValueParser:
+    """Convert environment variable strings to declared configuration types."""
+
+    @staticmethod
+    def parse(value: str, field_type: object) -> object:
+        """
+        Parse an environment value as the requested field type.
+
+        Parameters
+        ----------
+        value : str
+            Raw environment variable value.
+        field_type : object
+            Declared type of the configuration field.
+
+        Returns
+        -------
+        object
+            Parsed value matching ``field_type``.
+
+        Raises
+        ------
+        ValueError
+            If ``value`` cannot be parsed as the requested type.
+        TypeError
+            If ``field_type`` is unsupported.
+        """
+        if field_type is bool:
+            normalized_value: str = value.casefold()
+            if normalized_value == "true":
+                return True
+            if normalized_value == "false":
+                return False
+            raise ValueError("Expected 'true' or 'false'.")
+        if field_type is str:
+            return value
+        if field_type is int:
+            return int(value)
+        if field_type is float:
+            return float(value)
+        raise TypeError(f"Unsupported environment field type: {field_type}.")
+
+
 @dataclass(frozen=True, init=False)
 class Config:
     """
@@ -106,24 +149,12 @@ class Config:
             If the value cannot be converted or the type is unsupported.
         """
         try:
-            if field_type is bool:
-                normalized_value: str = raw_value.casefold()
-                if normalized_value == "true":
-                    return True
-                if normalized_value == "false":
-                    return False
-                raise ValueError("expected 'true' or 'false'")
-            if field_type is str:
-                return raw_value
-            if field_type is int:
-                return int(raw_value)
-            if field_type is float:
-                return float(raw_value)
+            return EnvValueParser.parse(raw_value, field_type)
         except ValueError as error:
             raise ConfigError(
                 f"Environment variable '{field_name}' has an invalid value."
             ) from error
-
-        raise ConfigError(
-            f"Environment overrides for '{field_name}' use an unsupported type."
-        )
+        except TypeError as error:
+            raise ConfigError(
+                f"Environment overrides for '{field_name}' use an unsupported type."
+            ) from error
