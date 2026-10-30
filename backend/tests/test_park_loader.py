@@ -17,9 +17,7 @@ def test_flatten_multipolygon_returns_all_coordinates() -> None:
         [[[2.0, 2.0], [3.0, 2.0]]],
     ]
 
-    flattened_coordinates: list[tuple[float, float]] = flatten_multipolygon(
-        coordinates
-    )
+    flattened_coordinates: list[tuple[float, float]] = flatten_multipolygon(coordinates)
 
     assert flattened_coordinates == [
         (0.0, 0.0),
@@ -45,9 +43,7 @@ def test_get_centroid_averages_coordinates() -> None:
 def test_to_park_maps_properties_and_centroid() -> None:
     feature: dict[str, Any] = {
         "geometry": {
-            "coordinates": [
-                [[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]]]
-            ]
+            "coordinates": [[[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]]]]
         },
         "properties": {
             "park_no": "P001",
@@ -80,9 +76,7 @@ def test_to_park_maps_properties_and_centroid() -> None:
 def test_load_from_geojson_reads_features(tmp_path: Path) -> None:
     feature: dict[str, Any] = {
         "geometry": {
-            "coordinates": [
-                [[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]]]
-            ]
+            "coordinates": [[[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]]]]
         },
         "properties": {
             "park_no": "P001",
