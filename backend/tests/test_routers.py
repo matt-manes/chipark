@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -87,18 +88,21 @@ def test_get_ticket_returns_404_for_missing_ticket(api_client: TestClient) -> No
 def test_add_ticket_defaults_status_and_escapes_issue(
     api_client: TestClient, sample_park: Park
 ) -> None:
+    request_started: datetime = datetime.now()
     response: Response = api_client.post(
         "/tickets",
         json={
             "park_name": sample_park.name,
-            "file_date": "2026-01-15T09:30:00",
             "estimated_hours": 2.5,
             "issue": "<script>alert('x')</script>",
         },
     )
+    request_finished: datetime = datetime.now()
 
     assert response.status_code == 201
     assert response.json()["status"] == TicketStatus.OPEN.value
+    filed_at: datetime = datetime.fromisoformat(response.json()["file_date"])
+    assert request_started <= filed_at <= request_finished
     assert (
         response.json()["issue"] == "&lt;script&gt;alert(&#x27;x&#x27;)&lt;/script&gt;"
     )
@@ -109,7 +113,6 @@ def test_add_ticket_rejects_unknown_park(api_client: TestClient) -> None:
         "/tickets",
         json={
             "park_name": "Unknown Park",
-            "file_date": "2026-01-15T09:30:00",
             "issue": "Broken bench",
         },
     )

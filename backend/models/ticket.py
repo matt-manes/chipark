@@ -48,8 +48,6 @@ class TicketSubmission(BaseModel):
     ----------
     park_name : str
         Exact name of an existing park.
-    file_date : datetime
-        Date and time when the issue was reported.
     estimated_hours : float or None, default=None
         Estimated repair duration, if known.
     issue : str
@@ -57,6 +55,5 @@ class TicketSubmission(BaseModel):
     """
 
     park_name: str
-    file_date: datetime
     estimated_hours: float | None = None
     issue: str
