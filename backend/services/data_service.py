@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from typing import Self
 
 from backend.tools.config import Config
@@ -12,15 +12,20 @@ class DataService:
     """Expose park and ticket operations through their repositories."""
 
     @classmethod
-    def get_default_service(cls) -> Self:
+    def get_default_service(cls) -> Iterator[Self]:
         """
-        Returns a DataService instance backed by whatever database is specified in the config.toml/environment.
+        Yield a service for the configured database and close it afterward.
 
-        Returns
+        Yields
         -------
         DataService
+            Service backed by the configured database.
         """
-        return cls(DatabaseFactory.get_database(Config().database))
+        data_service: Self = cls(DatabaseFactory.get_database(Config().database))
+        try:
+            yield data_service
+        finally:
+            data_service.close()
 
     def __init__(self, database: Database) -> None:
         """
@@ -77,6 +82,27 @@ class DataService:
             Persisted parks in database identifier order.
         """
         return self._park_repository.get_all()
+
+    def get_park(self, park_id: int) -> Park:
+        """
+        Retrieve a park by its database identifier.
+
+        Parameters
+        ----------
+        park_id : int
+            Identifier of the park to retrieve.
+
+        Returns
+        -------
+        Park
+            Matching persisted park.
+
+        Raises
+        ------
+        LookupError
+            If no park has the requested identifier.
+        """
+        return self._park_repository.get(park_id)
 
     def get_ticket(self, ticket_id: int) -> Ticket:
         """
@@ -146,3 +172,7 @@ class DataService:
             If no ticket has the requested identifier.
         """
         return self._ticket_repository.close(ticket_id)
+
+    def close(self) -> None:
+        """Dispose of the database engine owned by this service."""
+        self._database.close()

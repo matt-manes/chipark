@@ -68,6 +68,31 @@ class ParkRepository:
             ).all()
             return [self._to_model(record) for record in records]
 
+    def get(self, park_id: int) -> Park:
+        """
+        Retrieve a park by its database identifier.
+
+        Parameters
+        ----------
+        park_id : int
+            Identifier of the park to retrieve.
+
+        Returns
+        -------
+        Park
+            Matching persisted park.
+
+        Raises
+        ------
+        LookupError
+            If no park has the requested identifier.
+        """
+        with self._session_factory() as session:
+            record: ParkRecord | None = session.get(ParkRecord, park_id)
+            if record is None:
+                raise LookupError(f"Park {park_id} was not found")
+            return self._to_model(record)
+
     @staticmethod
     def _to_model(record: ParkRecord) -> Park:
         """

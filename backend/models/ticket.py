@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
+from pydantic import BaseModel
+
 
 class TicketStatus(Enum):
     """Represent the lifecycle status of a ticket."""
@@ -37,3 +39,24 @@ class Ticket:
     estimated_hours: float | None
     issue: str
     ticket_id: int = -1
+
+
+class TicketSubmission(BaseModel):
+    """Represent the fields accepted when submitting a new ticket.
+
+    Attributes
+    ----------
+    park_name : str
+        Exact name of an existing park.
+    file_date : datetime
+        Date and time when the issue was reported.
+    estimated_hours : float or None, default=None
+        Estimated repair duration, if known.
+    issue : str
+        User-submitted description of the issue.
+    """
+
+    park_name: str
+    file_date: datetime
+    estimated_hours: float | None = None
+    issue: str
