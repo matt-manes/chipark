@@ -1,31 +1,37 @@
-from collections.abc import Iterator, Sequence
+from collections.abc import Sequence
 from typing import Self
 
-from backend.tools.config import Config
+from starlette.requests import Request
 
 from ..models.park import Park
 from ..models.ticket import Ticket
-from ..repositories import Database, DatabaseFactory, ParkRepository, TicketRepository
+from ..repositories import Database, ParkRepository, TicketRepository
 
 
 class DataService:
     """Expose park and ticket operations through their repositories."""
 
     @classmethod
-    def get_default_service(cls) -> Iterator[Self]:
+    def get_default_service(cls, request: Request) -> Self:
         """
-        Yield a service for the configured database and close it afterward.
+        Return the service created during the application lifespan.
 
-        Yields
+        Parameters
+        ----------
+        request : Request
+            Current request, used to access application state.
+
+        Returns
         -------
-        DataService
-            Service backed by the configured database.
+        Self
+            Application-scoped service backed by the configured database.
+
+        Notes
+        -----
+        The application lifespan owns the service and closes it at shutdown.
         """
-        data_service: Self = cls(DatabaseFactory.get_database(Config().database))
-        try:
-            yield data_service
-        finally:
-            data_service.close()
+        data_service: Self = request.app.state.data_service
+        return data_service
 
     def __init__(self, database: Database) -> None:
         """
@@ -103,6 +109,22 @@ class DataService:
             If no park has the requested identifier.
         """
         return self._park_repository.get(park_id)
+
+    def park_exists(self, park_name: str) -> bool:
+        """
+        Check whether a park with the given name exists.
+
+        Parameters
+        ----------
+        park_name : str
+            Name of the park to find.
+
+        Returns
+        -------
+        bool
+            Whether a matching park exists.
+        """
+        return self._park_repository.park_exists(park_name)
 
     def get_ticket(self, ticket_id: int) -> Ticket:
         """

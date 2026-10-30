@@ -68,6 +68,26 @@ class ParkRepository:
             ).all()
             return [self._to_model(record) for record in records]
 
+    def park_exists(self, park_name: str) -> bool:
+        """
+        Check whether a park with the given name exists.
+
+        Parameters
+        ----------
+        park_name : str
+            Name of the park to find.
+
+        Returns
+        -------
+        bool
+            Whether a matching park exists.
+        """
+        with self._session_factory() as session:
+            park_id: int | None = session.scalar(
+                select(ParkRecord.park_id).where(ParkRecord.name == park_name).limit(1)
+            )
+            return park_id is not None
+
     def get(self, park_id: int) -> Park:
         """
         Retrieve a park by its database identifier.

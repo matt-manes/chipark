@@ -1,4 +1,6 @@
 import pytest
+from fastapi import FastAPI
+from starlette.requests import Request
 
 from backend.models.park import Park
 from backend.models.ticket import Ticket, TicketStatus
@@ -75,3 +77,16 @@ def test_close_ticket(
     closed_ticket: Ticket = data_service.close_ticket(saved_ticket.ticket_id)
 
     assert closed_ticket.status is TicketStatus.CLOSED
+
+
+def test_default_service_returns_service_from_app_state(
+    database: Database,
+) -> None:
+    application: FastAPI = FastAPI()
+    expected_service: DataService = DataService(database)
+    application.state.data_service = expected_service
+    request: Request = Request({"type": "http", "app": application})
+
+    service: DataService = DataService.get_default_service(request)
+
+    assert service is expected_service
