@@ -13,6 +13,19 @@ router: APIRouter = APIRouter(prefix="/tickets", tags=["tickets"])
 def get_tickets(
     data_service: Annotated[DataService, Depends(DataService.get_default_service)],
 ) -> list[Ticket]:
+    """
+    Retrieve all tickets.
+
+    Parameters
+    ----------
+    data_service : DataService
+        App-scoped service backed by the configured database.
+
+    Returns
+    -------
+    list[Ticket]
+        Tickets ordered by their database identifiers.
+    """
     return data_service.get_tickets()
 
 
@@ -21,6 +34,26 @@ def get_ticket(
     ticket_id: int,
     data_service: Annotated[DataService, Depends(DataService.get_default_service)],
 ) -> Ticket:
+    """
+    Retrieve a ticket by its database identifier.
+
+    Parameters
+    ----------
+    ticket_id : int
+        Identifier of the requested ticket.
+    data_service : DataService
+        App-scoped service backed by the configured database.
+
+    Returns
+    -------
+    Ticket
+        Matching ticket.
+
+    Raises
+    ------
+    HTTPException
+        If the ticket does not exist.
+    """
     try:
         return data_service.get_ticket(ticket_id)
     except LookupError as error:
@@ -32,10 +65,27 @@ def add_ticket(
     ticket_submission: TicketSubmission,
     data_service: Annotated[DataService, Depends(DataService.get_default_service)],
 ) -> Ticket:
-    park_exists: bool = any(
-        park.name == ticket_submission.park_name for park in data_service.get_parks()
-    )
-    if not park_exists:
+    """
+    Create an open ticket after validating its park association.
+
+    Parameters
+    ----------
+    ticket_submission : TicketSubmission
+        User-submitted ticket details.
+    data_service : DataService
+        App-scoped service backed by the configured database.
+
+    Returns
+    -------
+    Ticket
+        Newly created ticket with an escaped issue description.
+
+    Raises
+    ------
+    HTTPException
+        If the submitted park name does not match an existing park.
+    """
+    if not data_service.park_exists(ticket_submission.park_name):
         raise HTTPException(
             status_code=422,
             detail=f"Park '{ticket_submission.park_name}' was not found",
@@ -56,6 +106,26 @@ def close_ticket(
     ticket_id: int,
     data_service: Annotated[DataService, Depends(DataService.get_default_service)],
 ) -> Ticket:
+    """
+    Mark a ticket as closed.
+
+    Parameters
+    ----------
+    ticket_id : int
+        Identifier of the ticket to close.
+    data_service : DataService
+        App-scoped service backed by the configured database.
+
+    Returns
+    -------
+    Ticket
+        Updated ticket with closed status.
+
+    Raises
+    ------
+    HTTPException
+        If the ticket does not exist.
+    """
     try:
         return data_service.close_ticket(ticket_id)
     except LookupError as error:
