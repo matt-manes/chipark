@@ -31,6 +31,16 @@ def test_register_rejects_duplicate_email(auth_service: AuthService) -> None:
         auth_service.register("MEMBER@example.com", "another-secure-password")
 
 
+def test_register_rejects_invalid_email(auth_service: AuthService) -> None:
+    with pytest.raises(AuthenticationError, match="valid email"):
+        auth_service.register("invalid-email", "a-secure-user-password")
+
+
+def test_register_rejects_invalid_password(auth_service: AuthService) -> None:
+    with pytest.raises(AuthenticationError, match="Passwords must be between"):
+        auth_service.register("member@example.com", "short")
+
+
 def test_login_rejects_invalid_password(auth_service: AuthService) -> None:
     auth_service.register("member@example.com", "a-secure-user-password")
 

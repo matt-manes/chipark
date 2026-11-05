@@ -136,15 +136,18 @@ class TicketRepository:
         LookupError
             If no ticket has the requested identifier.
         ValueError
-            If a non-nullable editable field is set to ``None``.
+            If the issue is null or empty.
         """
         with self._session_factory.begin() as session:
             record: TicketRecord | None = session.get(TicketRecord, ticket_id)
             if record is None:
                 raise LookupError(f"Ticket {ticket_id} was not found")
             for field_name, value in changes.model_dump(exclude_unset=True).items():
-                if field_name == "issue" and value is None:
-                    raise ValueError("A ticket issue cannot be null.")
+                if field_name == "issue":
+                    if value is None:
+                        raise ValueError("A ticket issue cannot be null.")
+                    if not value.strip():
+                        raise ValueError("A ticket issue cannot be empty.")
                 setattr(record, field_name, value)
             session.flush()
             return self._to_model(record)

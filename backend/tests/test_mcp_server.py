@@ -264,6 +264,16 @@ def test_submit_ticket_requires_authentication(
         )
 
 
+def test_submit_ticket_rejects_non_http_request_context(
+    mcp_server: ChiparkMcpServer,
+    mcp_user_context: Context,
+) -> None:
+    setattr(mcp_user_context.request_context, "request", object())
+
+    with pytest.raises(TypeError, match="bearer token is required"):
+        mcp_server.submit_ticket("Sample Park", "Broken bench", ctx=mcp_user_context)
+
+
 def test_close_ticket_rejects_regular_user(
     mcp_server: ChiparkMcpServer,
     mcp_user_context: Context,
@@ -272,12 +282,65 @@ def test_close_ticket_rejects_regular_user(
         mcp_server.close_ticket(1, ctx=mcp_user_context)
 
 
+def test_close_ticket_raises_for_missing_ticket(
+    mcp_server: ChiparkMcpServer,
+    administrator_context: Context,
+) -> None:
+    with pytest.raises(ValueError, match="Ticket 1 was not found"):
+        mcp_server.close_ticket(1, ctx=administrator_context)
+
+
 def test_edit_ticket_rejects_regular_user(
     mcp_server: ChiparkMcpServer,
     mcp_user_context: Context,
 ) -> None:
     with pytest.raises(ValueError, match="Administrator privileges"):
         mcp_server.edit_ticket(1, ctx=mcp_user_context, issue="Changed issue")
+
+
+def test_edit_ticket_requires_at_least_one_field(
+    mcp_server: ChiparkMcpServer,
+    administrator_context: Context,
+) -> None:
+    with pytest.raises(ValueError, match="At least one editable"):
+        mcp_server.edit_ticket(1, ctx=administrator_context)
+
+
+def test_edit_ticket_rejects_conflicting_estimate_updates(
+    mcp_server: ChiparkMcpServer,
+    administrator_context: Context,
+) -> None:
+    with pytest.raises(ValueError, match="Specify an estimated value or clear it"):
+        mcp_server.edit_ticket(
+            1,
+            ctx=administrator_context,
+            estimated_hours=1.5,
+            clear_estimated_hours=True,
+        )
+
+
+def test_edit_ticket_raises_for_missing_ticket(
+    mcp_server: ChiparkMcpServer,
+    administrator_context: Context,
+) -> None:
+    with pytest.raises(ValueError, match="Ticket 1 was not found"):
+        mcp_server.edit_ticket(1, ctx=administrator_context, issue="Updated issue")
+
+
+def test_edit_ticket_rejects_empty_issue(
+    mcp_server: ChiparkMcpServer,
+    data_service: DataService,
+    sample_ticket: Ticket,
+    administrator_context: Context,
+) -> None:
+    saved_ticket: Ticket = data_service.add_ticket(sample_ticket)
+
+    with pytest.raises(ValueError, match="issue cannot be empty"):
+        mcp_server.edit_ticket(
+            saved_ticket.ticket_id,
+            ctx=administrator_context,
+            issue="",
+        )
 
 
 def test_admin_can_close_ticket(
@@ -312,6 +375,23 @@ def test_admin_can_edit_ticket(
     assert updated_ticket["issue"] == "Updated issue"
 
 
+def test_admin_can_clear_ticket_estimate(
+    mcp_server: ChiparkMcpServer,
+    data_service: DataService,
+    sample_ticket: Ticket,
+    administrator_context: Context,
+) -> None:
+    saved_ticket: Ticket = data_service.add_ticket(sample_ticket)
+
+    updated_ticket: TicketToolResult = mcp_server.edit_ticket(
+        saved_ticket.ticket_id,
+        ctx=administrator_context,
+        clear_estimated_hours=True,
+    )
+
+    assert updated_ticket["estimated_hours"] is None
+
+
 def test_admin_can_delete_ticket(
     mcp_server: ChiparkMcpServer,
     data_service: DataService,
@@ -325,3 +405,11 @@ def test_admin_can_delete_ticket(
     )
 
     assert result == {"deleted": True}
+
+
+def test_admin_delete_raises_for_missing_ticket(
+    mcp_server: ChiparkMcpServer,
+    administrator_context: Context,
+) -> None:
+    with pytest.raises(ValueError, match="Ticket 1 was not found"):
+        mcp_server.delete_ticket(1, ctx=administrator_context)

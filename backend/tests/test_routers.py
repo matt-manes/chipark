@@ -161,6 +161,31 @@ def test_registration_creates_user_and_returns_bearer_token(
     assert response.json()["access_token"]
 
 
+def test_registration_returns_conflict_for_existing_email(
+    api_client: TestClient,
+) -> None:
+    response: Response = api_client.post(
+        "/auth/register",
+        json={
+            "email": "admin@example.com",
+            "password": "a-secure-admin-password",
+        },
+    )
+
+    assert response.status_code == 409
+
+
+def test_login_returns_unauthorized_for_invalid_credentials(
+    api_client: TestClient,
+) -> None:
+    response: Response = api_client.post(
+        "/auth/login",
+        json={"email": "admin@example.com", "password": "wrong-password"},
+    )
+
+    assert response.status_code == 401
+
+
 def test_logout_revokes_the_current_token(api_client: TestClient) -> None:
     login_response: Response = api_client.post(
         "/auth/login",
@@ -293,7 +318,57 @@ def test_admin_cannot_update_ticket_park(
     assert response.status_code == 422
 
 
+def test_admin_update_returns_404_for_missing_ticket(api_client: TestClient) -> None:
+    response: Response = api_client.patch(
+        "/tickets/999",
+        json={"issue": "Updated issue"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_admin_update_returns_422_for_empty_issue(
+    api_client: TestClient, saved_ticket: Ticket
+) -> None:
+    response: Response = api_client.patch(
+        f"/tickets/{saved_ticket.ticket_id}",
+        json={"issue": ""},
+    )
+
+    assert response.status_code == 422
+
+
+def test_admin_update_returns_422_for_empty_update(
+    api_client: TestClient, saved_ticket: Ticket
+) -> None:
+    response: Response = api_client.patch(
+        f"/tickets/{saved_ticket.ticket_id}",
+        json={},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "At least one field is required."
+
+
+def test_admin_update_returns_422_for_null_issue(
+    api_client: TestClient, saved_ticket: Ticket
+) -> None:
+    response: Response = api_client.patch(
+        f"/tickets/{saved_ticket.ticket_id}",
+        json={"issue": None},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Ticket issue cannot be null."
+
+
 def test_admin_can_delete_ticket(api_client: TestClient, saved_ticket: Ticket) -> None:
     response: Response = api_client.delete(f"/tickets/{saved_ticket.ticket_id}")
 
     assert response.status_code == 204
+
+
+def test_admin_delete_returns_404_for_missing_ticket(api_client: TestClient) -> None:
+    response: Response = api_client.delete("/tickets/999")
+
+    assert response.status_code == 404
