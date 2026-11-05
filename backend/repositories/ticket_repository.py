@@ -117,7 +117,27 @@ class TicketRepository:
             return self._to_model(record)
 
     def update(self, ticket_id: int, changes: TicketUpdate) -> Ticket:
-        """Update supplied editable fields and return the persisted ticket."""
+        """Update editable fields and return the persisted ticket.
+
+        Parameters
+        ----------
+        ticket_id : int
+            Identifier of the ticket to update.
+        changes : TicketUpdate
+            Validated fields to change.
+
+        Returns
+        -------
+        Ticket
+            Updated ticket.
+
+        Raises
+        ------
+        LookupError
+            If no ticket has the requested identifier.
+        ValueError
+            If a non-nullable editable field is set to ``None``.
+        """
         with self._session_factory.begin() as session:
             record: TicketRecord | None = session.get(TicketRecord, ticket_id)
             if record is None:
@@ -130,7 +150,18 @@ class TicketRepository:
             return self._to_model(record)
 
     def delete(self, ticket_id: int) -> None:
-        """Delete a ticket by its database identifier."""
+        """Delete a ticket.
+
+        Parameters
+        ----------
+        ticket_id : int
+            Identifier of the ticket to delete.
+
+        Raises
+        ------
+        LookupError
+            If no ticket has the requested identifier.
+        """
         with self._session_factory.begin() as session:
             record: TicketRecord | None = session.get(TicketRecord, ticket_id)
             if record is None:

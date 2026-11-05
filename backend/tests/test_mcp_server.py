@@ -59,7 +59,20 @@ def administrator_context(auth_service: AuthService) -> Context:
 
 
 def _create_context(auth_service: AuthService, token: str | None) -> Context:
-    """Create an MCP request context with an optional bearer credential."""
+    """Create an MCP request context with an optional bearer credential.
+
+    Parameters
+    ----------
+    auth_service : AuthService
+        Authentication service used by the simulated request.
+    token : str or None
+        Bearer token to attach to the request, or ``None`` for no credential.
+
+    Returns
+    -------
+    Context
+        MCP context containing the constructed HTTP request.
+    """
     mcp_application: Starlette = Starlette()
     mcp_application.state.auth_service = auth_service
     headers: list[tuple[bytes, bytes]] = []

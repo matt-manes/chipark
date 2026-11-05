@@ -63,7 +63,15 @@ class TicketSubmission(BaseModel):
 
 
 class TicketUpdate(BaseModel):
-    """Represent editable ticket fields for administrative updates."""
+    """Validate fields accepted for administrative ticket updates.
+
+    Attributes
+    ----------
+    estimated_hours : float or None, optional
+        Updated work estimate, or ``None`` to clear it.
+    issue : str or None, optional
+        Updated issue description.
+    """
 
     model_config = ConfigDict(extra="forbid")
 

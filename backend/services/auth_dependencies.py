@@ -9,7 +9,23 @@ class AuthDependencies:
 
     @staticmethod
     def require_user(request: Request) -> User:
-        """Return the authenticated user or reject an unauthenticated request."""
+        """Resolve the current authenticated user.
+
+        Parameters
+        ----------
+        request : Request
+            Incoming HTTP request containing the bearer token.
+
+        Returns
+        -------
+        User
+            Authenticated account associated with the token.
+
+        Raises
+        ------
+        HTTPException
+            If the request has no valid bearer token.
+        """
         auth_service: AuthService = request.app.state.auth_service
         user: User | None = auth_service.authenticate_authorization_header(
             request.headers.get("authorization")
@@ -24,7 +40,23 @@ class AuthDependencies:
 
     @staticmethod
     def require_admin(request: Request) -> User:
-        """Return the authenticated administrator or reject the request."""
+        """Resolve the current administrator.
+
+        Parameters
+        ----------
+        request : Request
+            Incoming HTTP request containing the bearer token.
+
+        Returns
+        -------
+        User
+            Authenticated administrator account.
+
+        Raises
+        ------
+        HTTPException
+            If the user is unauthenticated or lacks administrator privileges.
+        """
         user: User = AuthDependencies.require_user(request)
         if user.role is not UserRole.ADMIN:
             raise HTTPException(

@@ -17,7 +17,18 @@ from backend.tools.mcp_server import ChiparkMcpServer, McpAsgiApp
 
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
-    """Create shared services and manage the MCP server through shutdown."""
+    """Manage database-backed services for the application lifespan.
+
+    Parameters
+    ----------
+    application : FastAPI
+        Application receiving the shared service instances.
+
+    Yields
+    ------
+    None
+        Control to the running application while its services are available.
+    """
     database: Database = DatabaseFactory.get_database(Config().CHIPARK_DATABASE)
     mcp_server: ChiparkMcpServer = ChiparkMcpServer()
     try:

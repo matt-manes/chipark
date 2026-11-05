@@ -25,7 +25,18 @@ class PasswordHasher:
     _SALT_LENGTH: int = 16
 
     def hash(self, password: str) -> str:
-        """Return a salted scrypt hash in a self-describing format."""
+        """Create a salted scrypt hash.
+
+        Parameters
+        ----------
+        password : str
+            Plain-text password to hash.
+
+        Returns
+        -------
+        str
+            Encoded scrypt parameters, salt, and derived key.
+        """
         salt: bytes = secrets.token_bytes(self._SALT_LENGTH)
         digest: bytes = hashlib.scrypt(
             password.encode("utf-8"),
@@ -47,7 +58,20 @@ class PasswordHasher:
         )
 
     def verify(self, password: str, password_hash: str | None) -> bool:
-        """Check a password against a previously generated hash."""
+        """Check a password against a stored scrypt hash.
+
+        Parameters
+        ----------
+        password : str
+            Plain-text password to verify.
+        password_hash : str or None
+            Encoded scrypt hash to compare against.
+
+        Returns
+        -------
+        bool
+            Whether the password matches the hash.
+        """
         if password_hash is None:
             return False
         try:
@@ -81,7 +105,13 @@ class PasswordHasher:
 
 
 class AuthService:
-    """Manage accounts, Google OAuth, and revocable bearer tokens."""
+    """Manage accounts, Google OAuth, and revocable bearer tokens.
+
+    Parameters
+    ----------
+    session_factory : sessionmaker[Session]
+        Factory used by the authentication repository.
+    """
 
     _TOKEN_LIFETIME: timedelta = timedelta(hours=24)
     _OAUTH_STATE_LIFETIME: timedelta = timedelta(minutes=5)
@@ -89,7 +119,13 @@ class AuthService:
     _MIN_PASSWORD_LENGTH: int = 6
 
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
-        """Create an authentication service backed by SQLAlchemy."""
+        """Initialize the service and its authentication helpers.
+
+        Parameters
+        ----------
+        session_factory : sessionmaker[Session]
+            Factory used by the authentication repository.
+        """
         self._repository: AuthRepository = AuthRepository(session_factory)
         self._password_hasher: PasswordHasher = PasswordHasher()
         self._google_oauth_client: GoogleOAuthClient = GoogleOAuthClient()
@@ -98,7 +134,26 @@ class AuthService:
         )
 
     def register(self, email: str, password: str) -> AuthenticatedUser:
-        """Create a regular email/password account and issue its bearer token."""
+        """Create a regular account and issue a bearer token.
+
+        Parameters
+        ----------
+        email : str
+            Email address for the new account.
+        password : str
+            Password to hash and store.
+
+        Returns
+        -------
+        AuthenticatedUser
+            New account and its access token.
+
+        Raises
+        ------
+        AuthenticationError
+            If the email is invalid, the password is outside allowed bounds, or
+            the account already exists.
+        """
         normalized_email: str = self._normalize_email(email)
         self._validate_password(password)
         try:
@@ -112,7 +167,25 @@ class AuthService:
         return self._issue_token(user)
 
     def login(self, email: str, password: str) -> AuthenticatedUser:
-        """Authenticate an email/password account and issue its bearer token."""
+        """Authenticate an account and issue a bearer token.
+
+        Parameters
+        ----------
+        email : str
+            Email address of the account.
+        password : str
+            Password to verify.
+
+        Returns
+        -------
+        AuthenticatedUser
+            Authenticated account and its access token.
+
+        Raises
+        ------
+        AuthenticationError
+            If the email or password is incorrect.
+        """
         normalized_email: str = self._normalize_email(email)
         credentials: UserCredentials | None = self._repository.get_credentials_by_email(
             normalized_email
@@ -128,7 +201,18 @@ class AuthService:
         return self._issue_token(credentials.user)
 
     def authenticate_token(self, token: str) -> User | None:
-        """Return the user for an active, unexpired bearer token."""
+        """Resolve the owner of an active bearer token.
+
+        Parameters
+        ----------
+        token : str
+            Opaque bearer token supplied by the caller.
+
+        Returns
+        -------
+        User or None
+            Token owner if the token is active and unexpired.
+        """
         return self._repository.get_user_for_token(
             self._hash_token(token), self._utc_now()
         )
@@ -136,7 +220,18 @@ class AuthService:
     def authenticate_authorization_header(
         self, authorization: str | None
     ) -> User | None:
-        """Authenticate a standard Bearer authorization header."""
+        """Authenticate a bearer token from an authorization header.
+
+        Parameters
+        ----------
+        authorization : str or None
+            Authorization header value.
+
+        Returns
+        -------
+        User or None
+            Authenticated account, or ``None`` for an invalid or absent token.
+        """
         if authorization is None:
             return None
         scheme, separator, token = authorization.partition(" ")
@@ -145,11 +240,36 @@ class AuthService:
         return self.authenticate_token(token.strip())
 
     def logout(self, token: str) -> None:
-        """Revoke a bearer token so it cannot be used again."""
+        """Revoke a bearer token.
+
+        Parameters
+        ----------
+        token : str
+            Opaque bearer token to revoke.
+        """
         self._repository.revoke_access_token(self._hash_token(token), self._utc_now())
 
     def bootstrap_admin(self, email: str | None, password: str | None) -> User | None:
-        """Create or promote the environment-configured administrator account."""
+        """Create or promote the configured administrator account.
+
+        Parameters
+        ----------
+        email : str or None
+            Administrator email from the environment.
+        password : str or None
+            Administrator password from the environment.
+
+        Returns
+        -------
+        User or None
+            Created or promoted administrator, or ``None`` when an administrator
+            exists and no bootstrap credentials were supplied.
+
+        Raises
+        ------
+        AuthenticationError
+            If credentials are incomplete or no administrator exists.
+        """
         if email is None and password is None:
             if self._repository.has_admin():
                 return None
@@ -167,7 +287,18 @@ class AuthService:
         )
 
     def begin_google_login(self) -> str:
-        """Create a Google authorization URL with one-time state and PKCE."""
+        """Create a Google authorization URL with one-time state and PKCE.
+
+        Returns
+        -------
+        str
+            Authorization URL for redirecting the user to Google.
+
+        Raises
+        ------
+        AuthenticationError
+            If required Google client configuration is missing.
+        """
         state: str = secrets.token_urlsafe(32)
         code_verifier: str = secrets.token_urlsafe(64)
         authorization_url: str = self._google_oauth_client.authorization_url(
@@ -183,7 +314,26 @@ class AuthService:
     async def complete_google_login(
         self, authorization_code: str, state: str
     ) -> AuthenticatedUser:
-        """Exchange a Google authorization code and authenticate its verified user."""
+        """Exchange a Google code and authenticate its verified account.
+
+        Parameters
+        ----------
+        authorization_code : str
+            Authorization code returned by Google.
+        state : str
+            One-time OAuth state from the authorization request.
+
+        Returns
+        -------
+        AuthenticatedUser
+            Verified account and issued bearer token.
+
+        Raises
+        ------
+        AuthenticationError
+            If state is invalid or expired, the Google exchange fails, or account
+            linking cannot be completed.
+        """
         code_verifier: str | None = self._repository.consume_oauth_state(
             self._hash_token(state), self._utc_now()
         )
@@ -212,7 +362,18 @@ class AuthService:
 
     @staticmethod
     def frontend_oauth_redirect_url() -> str:
-        """Return the configured frontend redirect after validating its scheme."""
+        """Return the configured frontend OAuth redirect URL.
+
+        Returns
+        -------
+        str
+            Valid HTTP(S) frontend redirect URL.
+
+        Raises
+        ------
+        AuthenticationError
+            If the configured URL does not use HTTP or HTTPS.
+        """
         redirect_url: str = Config().CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL
         parsed_url: SplitResult = urlsplit(redirect_url)
         if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
@@ -222,7 +383,18 @@ class AuthService:
         return redirect_url
 
     def _issue_token(self, user: User) -> AuthenticatedUser:
-        """Create and persist a new opaque bearer token."""
+        """Create and persist an opaque bearer token.
+
+        Parameters
+        ----------
+        user : User
+            Account that will own the token.
+
+        Returns
+        -------
+        AuthenticatedUser
+            Account and newly issued token with its expiry timestamp.
+        """
         token: str = secrets.token_urlsafe(32)
         expires_at: datetime = self._utc_now() + self._TOKEN_LIFETIME
         self._repository.add_access_token(
@@ -236,12 +408,39 @@ class AuthService:
 
     @staticmethod
     def _hash_token(token: str) -> str:
-        """Return the SHA-256 digest used to store bearer and OAuth state values."""
+        """Hash a bearer token or OAuth state value.
+
+        Parameters
+        ----------
+        token : str
+            Secret value to hash.
+
+        Returns
+        -------
+        str
+            Hex-encoded SHA-256 digest.
+        """
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
     @staticmethod
     def _normalize_email(email: str) -> str:
-        """Normalize an email address for consistent account lookup."""
+        """Normalize an email address for account lookup.
+
+        Parameters
+        ----------
+        email : str
+            Email address to normalize.
+
+        Returns
+        -------
+        str
+            Trimmed, case-folded email address.
+
+        Raises
+        ------
+        AuthenticationError
+            If the address does not have a valid basic email structure.
+        """
         normalized_email: str = email.strip().casefold()
         local_part, separator, domain = normalized_email.partition("@")
         if (
@@ -256,7 +455,19 @@ class AuthService:
 
     @classmethod
     def _validate_password(cls, password: str) -> None:
-        """Reject passwords outside the supported length bounds."""
+        """Validate password length.
+
+        Parameters
+        ----------
+        password : str
+            Password to validate.
+
+        Raises
+        ------
+        AuthenticationError
+            If the password is shorter than the minimum or longer than the
+            maximum supported length.
+        """
         if not cls._MIN_PASSWORD_LENGTH <= len(password) <= cls._MAX_PASSWORD_LENGTH:
             raise AuthenticationError(
                 f"Passwords must be between {cls._MIN_PASSWORD_LENGTH} and "
@@ -265,5 +476,11 @@ class AuthService:
 
     @staticmethod
     def _utc_now() -> datetime:
-        """Return naive UTC for consistent persistence in SQLite."""
+        """Return the current UTC time as a naive datetime.
+
+        Returns
+        -------
+        datetime
+            Current UTC timestamp without timezone information for SQLite.
+        """
         return datetime.now(UTC).replace(tzinfo=None)

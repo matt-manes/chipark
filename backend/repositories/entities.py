@@ -12,7 +12,21 @@ class Base(DeclarativeBase):
 
 
 class UserRecord(Base):
-    """Map account credentials and roles to the ``users`` table."""
+    """Map account credentials and roles to the ``users`` table.
+
+    Attributes
+    ----------
+    user_id : Mapped[int]
+        Primary key for the account.
+    email : Mapped[str]
+        Unique account email address.
+    password_hash : Mapped[str or None]
+        Password hash, if the account supports password login.
+    google_subject : Mapped[str or None]
+        Unique linked Google subject, if present.
+    role : Mapped[UserRole]
+        Account authorization role.
+    """
 
     __tablename__: str = "users"
 
@@ -28,7 +42,19 @@ class UserRecord(Base):
 
 
 class AccessTokenRecord(Base):
-    """Map hashed bearer tokens to their owners and expiry times."""
+    """Map bearer-token digests to their owners and lifecycle timestamps.
+
+    Attributes
+    ----------
+    token_hash : Mapped[str]
+        SHA-256 digest of the bearer token.
+    user_id : Mapped[int]
+        Identifier of the token owner.
+    expires_at : Mapped[datetime]
+        Token expiration timestamp.
+    revoked_at : Mapped[datetime or None]
+        Revocation timestamp, or ``None`` while active.
+    """
 
     __tablename__: str = "access_tokens"
 
@@ -41,7 +67,17 @@ class AccessTokenRecord(Base):
 
 
 class OAuthStateRecord(Base):
-    """Map one-time Google OAuth state to its PKCE verifier."""
+    """Map one-time Google OAuth state to its PKCE verifier.
+
+    Attributes
+    ----------
+    state_hash : Mapped[str]
+        SHA-256 digest of the OAuth state value.
+    code_verifier : Mapped[str]
+        PKCE verifier associated with the state.
+    expires_at : Mapped[datetime]
+        State expiration timestamp.
+    """
 
     __tablename__: str = "oauth_states"
 

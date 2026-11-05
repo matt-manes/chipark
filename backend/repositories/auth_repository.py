@@ -8,10 +8,22 @@ from .entities import AccessTokenRecord, OAuthStateRecord, UserRecord
 
 
 class AuthRepository:
-    """Persist users, bearer tokens, and one-time OAuth state."""
+    """Persist authentication accounts and token records.
+
+    Parameters
+    ----------
+    session_factory : sessionmaker[Session]
+        Factory used to create database sessions.
+    """
 
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
-        """Create an authentication repository."""
+        """Initialize the repository.
+
+        Parameters
+        ----------
+        session_factory : sessionmaker[Session]
+            Factory used to create database sessions.
+        """
         self._session_factory: sessionmaker[Session] = session_factory
 
     def create_user(
@@ -20,7 +32,22 @@ class AuthRepository:
         password_hash: str | None,
         google_subject: str | None = None,
     ) -> User:
-        """Create a regular user account."""
+        """Create a regular user account.
+
+        Parameters
+        ----------
+        email : str
+            Normalized email address for the account.
+        password_hash : str or None
+            Password hash, or ``None`` for an OAuth-only account.
+        google_subject : str or None, default=None
+            Google identity subject, when linking an OAuth account.
+
+        Returns
+        -------
+        User
+            The newly created account.
+        """
         with self._session_factory.begin() as session:
             record: UserRecord = UserRecord(
                 email=email,
@@ -33,7 +60,18 @@ class AuthRepository:
             return self._to_user(record)
 
     def get_credentials_by_email(self, email: str) -> UserCredentials | None:
-        """Retrieve an account and private credential fields by email."""
+        """Retrieve an account and its private credentials by email.
+
+        Parameters
+        ----------
+        email : str
+            Normalized email address to look up.
+
+        Returns
+        -------
+        UserCredentials or None
+            Account and credential data, or ``None`` if no account matches.
+        """
         with self._session_factory() as session:
             record: UserRecord | None = session.scalar(
                 select(UserRecord).where(UserRecord.email == email)
@@ -47,7 +85,18 @@ class AuthRepository:
             )
 
     def get_user_by_google_subject(self, google_subject: str) -> User | None:
-        """Retrieve an account associated with a Google subject identifier."""
+        """Find the account linked to a Google identity.
+
+        Parameters
+        ----------
+        google_subject : str
+            Google identity subject identifier.
+
+        Returns
+        -------
+        User or None
+            Matching account, or ``None`` if no account is linked.
+        """
         with self._session_factory() as session:
             record: UserRecord | None = session.scalar(
                 select(UserRecord).where(UserRecord.google_subject == google_subject)
@@ -55,7 +104,25 @@ class AuthRepository:
             return None if record is None else self._to_user(record)
 
     def link_google_account(self, email: str, google_subject: str) -> User:
-        """Link a verified Google identity to an email-matched account."""
+        """Link a verified Google identity to an email-matched account.
+
+        Parameters
+        ----------
+        email : str
+            Verified, normalized Google account email.
+        google_subject : str
+            Google identity subject identifier.
+
+        Returns
+        -------
+        User
+            The created or linked account.
+
+        Raises
+        ------
+        ValueError
+            If the email is already linked to a different Google identity.
+        """
         with self._session_factory.begin() as session:
             record: UserRecord | None = session.scalar(
                 select(UserRecord).where(UserRecord.email == email)
@@ -78,7 +145,20 @@ class AuthRepository:
             return self._to_user(record)
 
     def ensure_admin(self, email: str, password_hash: str) -> User:
-        """Create the configured administrator or promote its existing account."""
+        """Create or promote the configured administrator account.
+
+        Parameters
+        ----------
+        email : str
+            Administrator email address.
+        password_hash : str
+            Password hash to assign to the administrator.
+
+        Returns
+        -------
+        User
+            The created or promoted administrator.
+        """
         with self._session_factory.begin() as session:
             record: UserRecord | None = session.scalar(
                 select(UserRecord).where(UserRecord.email == email)
@@ -97,7 +177,13 @@ class AuthRepository:
             return self._to_user(record)
 
     def has_admin(self) -> bool:
-        """Return whether the database contains an administrator account."""
+        """Check whether an administrator account exists.
+
+        Returns
+        -------
+        bool
+            Whether the database contains an administrator.
+        """
         with self._session_factory() as session:
             return (
                 session.scalar(
@@ -111,7 +197,17 @@ class AuthRepository:
     def add_access_token(
         self, token_hash: str, user_id: int, expires_at: datetime
     ) -> None:
-        """Persist a hashed bearer token."""
+        """Persist a hashed bearer token.
+
+        Parameters
+        ----------
+        token_hash : str
+            SHA-256 digest of the bearer token.
+        user_id : int
+            Identifier of the token owner.
+        expires_at : datetime
+            Token expiration timestamp.
+        """
         with self._session_factory.begin() as session:
             session.add(
                 AccessTokenRecord(
@@ -122,7 +218,20 @@ class AuthRepository:
             )
 
     def get_user_for_token(self, token_hash: str, now: datetime) -> User | None:
-        """Return the token owner if its token is active and unexpired."""
+        """Look up the owner of an active bearer token.
+
+        Parameters
+        ----------
+        token_hash : str
+            SHA-256 digest of the token.
+        now : datetime
+            Current timestamp used to check token expiration.
+
+        Returns
+        -------
+        User or None
+            Token owner if the token is active, otherwise ``None``.
+        """
         with self._session_factory() as session:
             record: UserRecord | None = session.scalar(
                 select(UserRecord)
@@ -138,7 +247,15 @@ class AuthRepository:
             return None if record is None else self._to_user(record)
 
     def revoke_access_token(self, token_hash: str, revoked_at: datetime) -> None:
-        """Revoke an active access token."""
+        """Mark an active access token as revoked.
+
+        Parameters
+        ----------
+        token_hash : str
+            SHA-256 digest of the token to revoke.
+        revoked_at : datetime
+            Timestamp at which the token was revoked.
+        """
         with self._session_factory.begin() as session:
             record: AccessTokenRecord | None = session.get(
                 AccessTokenRecord, token_hash
@@ -149,7 +266,17 @@ class AuthRepository:
     def add_oauth_state(
         self, state_hash: str, code_verifier: str, expires_at: datetime
     ) -> None:
-        """Persist a short-lived OAuth state and PKCE verifier."""
+        """Persist one-time OAuth state and its PKCE verifier.
+
+        Parameters
+        ----------
+        state_hash : str
+            SHA-256 digest of the OAuth state value.
+        code_verifier : str
+            PKCE verifier associated with the state.
+        expires_at : datetime
+            State expiration timestamp.
+        """
         with self._session_factory.begin() as session:
             session.add(
                 OAuthStateRecord(
@@ -160,7 +287,20 @@ class AuthRepository:
             )
 
     def consume_oauth_state(self, state_hash: str, now: datetime) -> str | None:
-        """Consume a matching unexpired OAuth state once."""
+        """Consume an OAuth state and return its verifier if still valid.
+
+        Parameters
+        ----------
+        state_hash : str
+            SHA-256 digest of the submitted OAuth state.
+        now : datetime
+            Current timestamp used to check state expiration.
+
+        Returns
+        -------
+        str or None
+            PKCE verifier for a valid state, otherwise ``None``.
+        """
         with self._session_factory.begin() as session:
             record: OAuthStateRecord | None = session.get(OAuthStateRecord, state_hash)
             if record is None:
@@ -173,7 +313,18 @@ class AuthRepository:
 
     @staticmethod
     def _to_user(record: UserRecord) -> User:
-        """Convert an ORM account record to its public model."""
+        """Convert an ORM account record to its public model.
+
+        Parameters
+        ----------
+        record : UserRecord
+            Persisted account record.
+
+        Returns
+        -------
+        User
+            Public account model without credential fields.
+        """
         return User(
             user_id=record.user_id,
             email=record.email,

@@ -78,6 +78,8 @@ def add_ticket(
         User-submitted ticket details.
     data_service : DataService
         App-scoped service backed by the configured database.
+    user : User
+        Authenticated account submitting the ticket.
 
     Returns
     -------
@@ -121,6 +123,8 @@ def close_ticket(
         Identifier of the ticket to close.
     data_service : DataService
         App-scoped service backed by the configured database.
+    user : User
+        Administrator authenticated by the dependency.
 
     Returns
     -------
@@ -145,7 +149,29 @@ def update_ticket(
     data_service: Annotated[DataService, Depends(DataService.get_default_service)],
     user: Annotated[User, Depends(AuthDependencies.require_admin)],
 ) -> Ticket:
-    """Update an existing ticket as an administrator."""
+    """Update an existing ticket as an administrator.
+
+    Parameters
+    ----------
+    ticket_id : int
+        Identifier of the ticket to update.
+    changes : TicketUpdate
+        Fields to update.
+    data_service : DataService
+        Service used to access ticket persistence.
+    user : User
+        Administrator authenticated by the dependency.
+
+    Returns
+    -------
+    Ticket
+        Updated ticket.
+
+    Raises
+    ------
+    HTTPException
+        If the update is invalid or the ticket does not exist.
+    """
     updates: dict[str, object] = changes.model_dump(exclude_unset=True)
     if not updates:
         raise HTTPException(status_code=422, detail="At least one field is required.")
@@ -170,7 +196,22 @@ def delete_ticket(
     data_service: Annotated[DataService, Depends(DataService.get_default_service)],
     user: Annotated[User, Depends(AuthDependencies.require_admin)],
 ) -> None:
-    """Delete an existing ticket as an administrator."""
+    """Delete an existing ticket as an administrator.
+
+    Parameters
+    ----------
+    ticket_id : int
+        Identifier of the ticket to delete.
+    data_service : DataService
+        Service used to access ticket persistence.
+    user : User
+        Administrator authenticated by the dependency.
+
+    Raises
+    ------
+    HTTPException
+        If the ticket does not exist.
+    """
     try:
         data_service.delete_ticket(ticket_id)
     except LookupError as error:

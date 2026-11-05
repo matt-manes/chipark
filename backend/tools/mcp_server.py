@@ -24,15 +24,36 @@ class McpAsgiApp:
     """Delegate ASGI requests to the MCP app active in the host lifespan."""
 
     def __init__(self) -> None:
-        """Create an inactive MCP ASGI delegate."""
+        """Initialize an MCP ASGI delegate without an active application."""
         self._application: Starlette | None = None
 
     def set_application(self, application: Starlette | None) -> None:
-        """Set the active MCP application for the host lifespan."""
+        """Set the active application.
+
+        Parameters
+        ----------
+        application : Starlette or None
+            MCP application to delegate requests to, or ``None`` while stopped.
+        """
         self._application = application
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        """Forward an ASGI request to the active MCP application."""
+        """Forward an ASGI request to the active MCP application.
+
+        Parameters
+        ----------
+        scope : Scope
+            ASGI connection scope.
+        receive : Receive
+            ASGI receive callable.
+        send : Send
+            ASGI send callable.
+
+        Raises
+        ------
+        RuntimeError
+            If the host lifespan has not activated the MCP application.
+        """
         application: Starlette | None = self._application
         if application is None:
             raise RuntimeError("The Chipark MCP application is not running.")
@@ -59,7 +80,7 @@ class ChiparkMcpServer:
     }
 
     def __init__(self) -> None:
-        """Create the MCP server and register its tools."""
+        """Initialize the MCP server and register its tools."""
         self._data_service: DataService | None = None
         self._server: MCPServer = MCPServer("Chipark")
         self._server.tool()(self.list_tools)
@@ -84,7 +105,13 @@ class ChiparkMcpServer:
 
     @property
     def session_manager(self) -> StreamableHTTPSessionManager:
-        """Return the MCP session manager used by the host lifespan."""
+        """Return the MCP session manager used by the host lifespan.
+
+        Returns
+        -------
+        StreamableHTTPSessionManager
+            Session manager associated with the MCP server.
+        """
         return self._server.session_manager
 
     def set_data_service(self, data_service: DataService | None) -> None:
@@ -207,7 +234,25 @@ class ChiparkMcpServer:
         return self._ticket_to_result(saved_ticket)
 
     def close_ticket(self, ticket_id: int, ctx: Context) -> TicketToolResult:
-        """Close a ticket after verifying administrator privileges."""
+        """Close a ticket after verifying administrator privileges.
+
+        Parameters
+        ----------
+        ticket_id : int
+            Identifier of the ticket to close.
+        ctx : Context
+            MCP request context containing the caller's authorization header.
+
+        Returns
+        -------
+        TicketToolResult
+            Updated ticket with closed status.
+
+        Raises
+        ------
+        ValueError
+            If the caller is not an administrator or the ticket does not exist.
+        """
         self._require_mcp_admin(ctx)
         try:
             ticket: Ticket = self._require_data_service().close_ticket(ticket_id)
@@ -223,7 +268,32 @@ class ChiparkMcpServer:
         issue: str | None = None,
         clear_estimated_hours: bool = False,
     ) -> TicketToolResult:
-        """Edit supplied ticket fields after verifying administrator privileges."""
+        """Edit ticket details after verifying administrator privileges.
+
+        Parameters
+        ----------
+        ticket_id : int
+            Identifier of the ticket to update.
+        ctx : Context
+            MCP request context containing the caller's authorization header.
+        estimated_hours : float or None, default=None
+            Updated work estimate, when supplied.
+        issue : str or None, default=None
+            Updated issue description, when supplied.
+        clear_estimated_hours : bool, default=False
+            Whether to clear the existing work estimate.
+
+        Returns
+        -------
+        TicketToolResult
+            Updated ticket.
+
+        Raises
+        ------
+        ValueError
+            If the caller is not an administrator, the update is empty or
+            conflicting, or the ticket does not exist.
+        """
         self._require_mcp_admin(ctx)
         data_service: DataService = self._require_data_service()
         updates: dict[str, object] = {}
@@ -248,7 +318,25 @@ class ChiparkMcpServer:
         return self._ticket_to_result(ticket)
 
     def delete_ticket(self, ticket_id: int, ctx: Context) -> dict[str, bool]:
-        """Delete a ticket after verifying administrator privileges."""
+        """Delete a ticket after verifying administrator privileges.
+
+        Parameters
+        ----------
+        ticket_id : int
+            Identifier of the ticket to delete.
+        ctx : Context
+            MCP request context containing the caller's authorization header.
+
+        Returns
+        -------
+        dict[str, bool]
+            Confirmation that the ticket was deleted.
+
+        Raises
+        ------
+        ValueError
+            If the caller is not an administrator or the ticket does not exist.
+        """
         self._require_mcp_admin(ctx)
         try:
             self._require_data_service().delete_ticket(ticket_id)
@@ -257,13 +345,42 @@ class ChiparkMcpServer:
         return {"deleted": True}
 
     def _require_data_service(self) -> DataService:
-        """Return the active app-scoped service or raise if the app is stopped."""
+        """Return the active app-scoped data service.
+
+        Returns
+        -------
+        DataService
+            Service configured by the host application's lifespan.
+
+        Raises
+        ------
+        RuntimeError
+            If the host application is stopped.
+        """
         if self._data_service is None:
             raise RuntimeError("The Chipark application lifespan is not active.")
         return self._data_service
 
     def _require_mcp_user(self, context: Context) -> User:
-        """Authenticate a bearer token from the current MCP HTTP request."""
+        """Authenticate the user making the current MCP request.
+
+        Parameters
+        ----------
+        context : Context
+            MCP request context with the underlying HTTP request.
+
+        Returns
+        -------
+        User
+            Account identified by the valid bearer token.
+
+        Raises
+        ------
+        TypeError
+            If the context does not contain an HTTP request.
+        ValueError
+            If the request has no valid bearer token.
+        """
         request: object = context.request_context.request
         if not isinstance(request, Request):
             raise TypeError("A bearer token is required for this MCP tool.")
@@ -276,7 +393,25 @@ class ChiparkMcpServer:
         return user
 
     def _require_mcp_admin(self, context: Context) -> User:
-        """Authenticate the MCP request and require an administrator role."""
+        """Authenticate the MCP request and require an administrator.
+
+        Parameters
+        ----------
+        context : Context
+            MCP request context with the underlying HTTP request.
+
+        Returns
+        -------
+        User
+            Authenticated administrator account.
+
+        Raises
+        ------
+        TypeError
+            If the context does not contain an HTTP request.
+        ValueError
+            If the request is unauthenticated or the account is not an admin.
+        """
         user: User = self._require_mcp_user(context)
         if user.role is not UserRole.ADMIN:
             raise ValueError("Administrator privileges are required.")

@@ -27,7 +27,25 @@ def register(
     submission: RegistrationRequest,
     request: Request,
 ) -> AuthenticatedUserResponse:
-    """Create an email/password account and return a bearer token."""
+    """Create an email/password account and issue a bearer token.
+
+    Parameters
+    ----------
+    submission : RegistrationRequest
+        Validated registration details.
+    request : Request
+        Incoming request containing the application authentication service.
+
+    Returns
+    -------
+    AuthenticatedUserResponse
+        Public account details and issued access token.
+
+    Raises
+    ------
+    HTTPException
+        If the email is already registered or registration details are invalid.
+    """
     try:
         authenticated_user: AuthenticatedUser = request.app.state.auth_service.register(
             submission.email, submission.password
@@ -42,7 +60,25 @@ def login(
     submission: LoginRequest,
     request: Request,
 ) -> AuthenticatedUserResponse:
-    """Authenticate an email/password account and return a bearer token."""
+    """Authenticate an account and issue a bearer token.
+
+    Parameters
+    ----------
+    submission : LoginRequest
+        Validated login credentials.
+    request : Request
+        Incoming request containing the application authentication service.
+
+    Returns
+    -------
+    AuthenticatedUserResponse
+        Public account details and issued access token.
+
+    Raises
+    ------
+    HTTPException
+        If the credentials are incorrect.
+    """
     try:
         authenticated_user: AuthenticatedUser = request.app.state.auth_service.login(
             submission.email, submission.password
@@ -61,7 +97,20 @@ def logout(
     request: Request,
     user: Annotated[User, Depends(AuthDependencies.require_user)],
 ) -> Response:
-    """Revoke the current bearer token."""
+    """Revoke the current bearer token.
+
+    Parameters
+    ----------
+    request : Request
+        Incoming request carrying the authenticated token.
+    user : User
+        Account authenticated by the dependency.
+
+    Returns
+    -------
+    Response
+        Empty response with status code 204.
+    """
     authorization: str = request.headers["authorization"]
     token: str = authorization.partition(" ")[2].strip()
     request.app.state.auth_service.logout(token)
@@ -72,7 +121,18 @@ def logout(
 def get_current_user(
     user: Annotated[User, Depends(AuthDependencies.require_user)],
 ) -> UserResponse:
-    """Return the currently authenticated account."""
+    """Return the currently authenticated account.
+
+    Parameters
+    ----------
+    user : User
+        Account authenticated by the dependency.
+
+    Returns
+    -------
+    UserResponse
+        Public details for the current account.
+    """
     return UserResponse(
         user_id=user.user_id,
         email=user.email,
@@ -82,7 +142,23 @@ def get_current_user(
 
 @router.get("/google")
 def begin_google_login(request: Request) -> RedirectResponse:
-    """Redirect to Google to begin OpenID Connect login."""
+    """Redirect the client to begin Google OpenID Connect login.
+
+    Parameters
+    ----------
+    request : Request
+        Incoming request containing the application authentication service.
+
+    Returns
+    -------
+    RedirectResponse
+        Redirect to Google's authorization endpoint.
+
+    Raises
+    ------
+    HTTPException
+        If Google OAuth configuration is incomplete.
+    """
     try:
         authorization_url: str = request.app.state.auth_service.begin_google_login()
     except AuthenticationError as error:
@@ -97,7 +173,30 @@ async def finish_google_login(
     state: Annotated[str | None, Query()] = None,
     oauth_error: Annotated[str | None, Query(alias="error")] = None,
 ) -> RedirectResponse:
-    """Complete Google login and redirect with the bearer token in the URL fragment."""
+    """Complete Google login and redirect with the issued token.
+
+    Parameters
+    ----------
+    request : Request
+        Incoming callback request.
+    code : str or None, default=None
+        Authorization code returned by Google.
+    state : str or None, default=None
+        One-time state value from the authorization request.
+    oauth_error : str or None, default=None
+        OAuth error returned when Google rejects or cancels authorization.
+
+    Returns
+    -------
+    RedirectResponse
+        Redirect to the configured frontend with the token in its URL fragment.
+
+    Raises
+    ------
+    HTTPException
+        If callback parameters are invalid, authentication fails, or the frontend
+        redirect URL is misconfigured.
+    """
     if oauth_error is not None:
         raise HTTPException(
             status_code=400, detail="Google sign-in was cancelled or denied."

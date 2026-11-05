@@ -196,11 +196,42 @@ class DataService:
         return self._ticket_repository.close(ticket_id)
 
     def update_ticket(self, ticket_id: int, changes: TicketUpdate) -> Ticket:
-        """Update editable fields on an existing ticket."""
+        """Update editable fields on an existing ticket.
+
+        Parameters
+        ----------
+        ticket_id : int
+            Identifier of the ticket to update.
+        changes : TicketUpdate
+            Validated fields to change.
+
+        Returns
+        -------
+        Ticket
+            Updated ticket.
+
+        Raises
+        ------
+        LookupError
+            If no ticket has the requested identifier.
+        ValueError
+            If a non-nullable editable field is set to ``None``.
+        """
         return self._ticket_repository.update(ticket_id, changes)
 
     def delete_ticket(self, ticket_id: int) -> None:
-        """Delete an existing ticket."""
+        """Delete an existing ticket.
+
+        Parameters
+        ----------
+        ticket_id : int
+            Identifier of the ticket to delete.
+
+        Raises
+        ------
+        LookupError
+            If no ticket has the requested identifier.
+        """
         self._ticket_repository.delete(ticket_id)
 
     def close(self) -> None:

@@ -12,7 +12,15 @@ from .auth_errors import AuthenticationError
 
 @dataclass(frozen=True)
 class GoogleIdentity:
-    """Represent a Google account verified through OpenID Connect."""
+    """Represent a Google account verified through OpenID Connect.
+
+    Attributes
+    ----------
+    email : str
+        Verified email address returned by Google.
+    subject : str
+        Stable Google identity subject identifier.
+    """
 
     email: str
     subject: str
@@ -26,7 +34,25 @@ class GoogleOAuthClient:
     _USERINFO_URL: str = "https://openidconnect.googleapis.com/v1/userinfo"
 
     def authorization_url(self, state: str, code_verifier: str) -> str:
-        """Create a Google authorization URL for a PKCE-protected login."""
+        """Create a Google authorization URL for a PKCE-protected login.
+
+        Parameters
+        ----------
+        state : str
+            One-time value used to validate the OAuth callback.
+        code_verifier : str
+            Secret used to generate the PKCE challenge.
+
+        Returns
+        -------
+        str
+            Google authorization URL.
+
+        Raises
+        ------
+        AuthenticationError
+            If required Google client configuration is missing.
+        """
         self._required_environment("CHIPARK_GOOGLE_CLIENT_SECRET")
         query: str = urlencode(
             {
@@ -46,7 +72,25 @@ class GoogleOAuthClient:
     async def get_verified_identity(
         self, authorization_code: str, code_verifier: str
     ) -> GoogleIdentity:
-        """Exchange an authorization code and retrieve its verified Google identity."""
+        """Exchange an authorization code and retrieve the verified identity.
+
+        Parameters
+        ----------
+        authorization_code : str
+            Authorization code returned by Google.
+        code_verifier : str
+            PKCE verifier associated with the authorization request.
+
+        Returns
+        -------
+        GoogleIdentity
+            Verified Google email address and subject identifier.
+
+        Raises
+        ------
+        AuthenticationError
+            If the exchange fails or Google does not verify the email.
+        """
         client_id: str = self._required_environment("CHIPARK_GOOGLE_CLIENT_ID")
         client_secret: str = self._required_environment("CHIPARK_GOOGLE_CLIENT_SECRET")
         redirect_uri: str = self._required_environment("CHIPARK_GOOGLE_REDIRECT_URI")
@@ -90,13 +134,40 @@ class GoogleOAuthClient:
 
     @staticmethod
     def _code_challenge(code_verifier: str) -> str:
-        """Create the URL-safe SHA-256 PKCE challenge."""
+        """Create a URL-safe SHA-256 PKCE challenge.
+
+        Parameters
+        ----------
+        code_verifier : str
+            PKCE secret to transform into a challenge.
+
+        Returns
+        -------
+        str
+            URL-safe, unpadded SHA-256 challenge.
+        """
         digest: bytes = hashlib.sha256(code_verifier.encode("ascii")).digest()
         return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
 
     @staticmethod
     def _required_environment(name: str) -> str:
-        """Return a required OAuth environment setting."""
+        """Read a required OAuth environment setting.
+
+        Parameters
+        ----------
+        name : str
+            Name of the required environment variable.
+
+        Returns
+        -------
+        str
+            Non-empty environment variable value.
+
+        Raises
+        ------
+        AuthenticationError
+            If the variable is missing or blank.
+        """
         value: str | None = os.environ.get(name)
         if value is None or not value.strip():
             raise AuthenticationError(f"Set {name} to enable Google sign-in.")
@@ -104,7 +175,25 @@ class GoogleOAuthClient:
 
     @staticmethod
     def _read_string(payload: object, key: str) -> str:
-        """Read a non-empty string field from a JSON response."""
+        """Read a non-empty string field from a JSON response.
+
+        Parameters
+        ----------
+        payload : object
+            Decoded JSON response payload.
+        key : str
+            Name of the required string field.
+
+        Returns
+        -------
+        str
+            Non-empty value of the requested field.
+
+        Raises
+        ------
+        AuthenticationError
+            If the payload field is missing or is not a non-empty string.
+        """
         if not isinstance(payload, dict):
             raise AuthenticationError("Google returned an invalid response.")
         value: object = payload.get(key)  # type: ignore
