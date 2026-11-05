@@ -49,7 +49,7 @@ class SqliteDatabase(Database):
     @staticmethod
     def _enable_foreign_keys(
         dbapi_connection: DBAPIConnection,
-        connection_record: ConnectionPoolEntry,
+        _connection_record: ConnectionPoolEntry,
     ) -> None:
         """
         Enable foreign-key enforcement on each SQLite connection.
@@ -58,7 +58,7 @@ class SqliteDatabase(Database):
         ----------
         dbapi_connection : DBAPIConnection
             Newly created SQLite DB-API connection.
-        connection_record : ConnectionPoolEntry
+        _connection_record : ConnectionPoolEntry
             SQLAlchemy connection pool entry for the connection.
         """
         cursor: DBAPICursor = dbapi_connection.cursor()

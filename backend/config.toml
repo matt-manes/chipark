@@ -1,1 +1,2 @@
-database="sqlite"
+CHIPARK_DATABASE="sqlite"
+CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL="http://localhost:3000/auth/callback"

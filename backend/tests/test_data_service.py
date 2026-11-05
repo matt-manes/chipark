@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from starlette.requests import Request
 
 from backend.models.park import Park
-from backend.models.ticket import Ticket, TicketStatus
+from backend.models.ticket import Ticket, TicketStatus, TicketUpdate
 from backend.repositories.database import Database
 from backend.services.data_service import DataService
 
@@ -77,6 +77,33 @@ def test_close_ticket(
     closed_ticket: Ticket = data_service.close_ticket(saved_ticket.ticket_id)
 
     assert closed_ticket.status is TicketStatus.CLOSED
+
+
+def test_update_ticket_changes_supplied_fields(
+    database: Database, sample_park: Park, sample_ticket: Ticket
+) -> None:
+    data_service: DataService = DataService(database)
+    data_service.add_park(sample_park)
+    saved_ticket: Ticket = data_service.add_ticket(sample_ticket)
+
+    updated_ticket: Ticket = data_service.update_ticket(
+        saved_ticket.ticket_id, TicketUpdate(issue="Updated issue")
+    )
+
+    assert updated_ticket.issue == "Updated issue"
+
+
+def test_delete_ticket_removes_ticket(
+    database: Database, sample_park: Park, sample_ticket: Ticket
+) -> None:
+    data_service: DataService = DataService(database)
+    data_service.add_park(sample_park)
+    saved_ticket: Ticket = data_service.add_ticket(sample_ticket)
+
+    data_service.delete_ticket(saved_ticket.ticket_id)
+
+    with pytest.raises(LookupError, match="Ticket"):
+        data_service.get_ticket(saved_ticket.ticket_id)
 
 
 def test_default_service_returns_service_from_app_state(

@@ -1,10 +1,18 @@
 from datetime import datetime
+from typing import cast
 
 import pytest
+from mcp.server.context import ServerRequestContext
+from mcp.server.mcpserver.context import Context
+from mcp.server.session import ServerSession
+from starlette.applications import Starlette
+from starlette.requests import Request
 
 from backend.models.park import Park
 from backend.models.ticket import Ticket, TicketStatus
+from backend.models.user import AuthenticatedUser
 from backend.repositories.database import Database
+from backend.services.auth_service import AuthService
 from backend.services.data_service import DataService
 from backend.tools.mcp_server import ChiparkMcpServer, TicketToolResult
 
@@ -23,6 +31,57 @@ def mcp_server(data_service: DataService) -> ChiparkMcpServer:
     return server
 
 
+@pytest.fixture
+def auth_service(database: Database) -> AuthService:
+    return AuthService(database.session_factory)
+
+
+@pytest.fixture
+def mcp_user_context(auth_service: AuthService) -> Context:
+    authenticated_user: AuthenticatedUser = auth_service.register(
+        "member@example.com", "a-secure-password"
+    )
+    return _create_context(auth_service, authenticated_user.access_token)
+
+
+@pytest.fixture
+def unauthenticated_context(auth_service: AuthService) -> Context:
+    return _create_context(auth_service, None)
+
+
+@pytest.fixture
+def administrator_context(auth_service: AuthService) -> Context:
+    auth_service.bootstrap_admin("admin@example.com", "a-secure-admin-password")
+    authenticated_admin: AuthenticatedUser = auth_service.login(
+        "admin@example.com", "a-secure-admin-password"
+    )
+    return _create_context(auth_service, authenticated_admin.access_token)
+
+
+def _create_context(auth_service: AuthService, token: str | None) -> Context:
+    """Create an MCP request context with an optional bearer credential."""
+    mcp_application: Starlette = Starlette()
+    mcp_application.state.auth_service = auth_service
+    headers: list[tuple[bytes, bytes]] = []
+    if token is not None:
+        headers.append((b"authorization", f"Bearer {token}".encode("ascii")))
+    request: Request = Request(
+        {
+            "type": "http",
+            "app": mcp_application,
+            "headers": headers,
+        }
+    )
+    request_context: ServerRequestContext = ServerRequestContext(
+        session=cast(ServerSession, None),
+        lifespan_context={},
+        protocol_version="2025-03-26",
+        method="tools/call",
+        request=request,
+    )
+    return Context(request_context=request_context)
+
+
 def test_list_tools_returns_registered_tool_descriptions(
     mcp_server: ChiparkMcpServer,
 ) -> None:
@@ -34,6 +93,9 @@ def test_list_tools_returns_registered_tool_descriptions(
         "list_tickets",
         "get_park",
         "submit_ticket",
+        "close_ticket",
+        "edit_ticket",
+        "delete_ticket",
     ]
     assert all(tool["description"] for tool in tools)
 
@@ -88,9 +150,10 @@ def test_get_park_returns_park_by_id(
     mcp_server: ChiparkMcpServer, sample_park: Park
 ) -> None:
     parks: list[dict[str, str | int | float | None]] = mcp_server.list_parks()
-    park_id: int = int(parks[0]["park_id"])  # type: ignore
+    park_id_value: str | int | float | None = parks[0]["park_id"]
+    assert isinstance(park_id_value, int)
 
-    park: dict[str, str | int | float | None] = mcp_server.get_park(park_id)
+    park: dict[str, str | int | float | None] = mcp_server.get_park(park_id_value)
 
     assert park["name"] == sample_park.name
 
@@ -108,35 +171,45 @@ def test_list_parks_requires_active_data_service() -> None:
 
 
 def test_submit_ticket_creates_open_ticket(
-    mcp_server: ChiparkMcpServer, sample_park: Park
+    mcp_server: ChiparkMcpServer,
+    sample_park: Park,
+    mcp_user_context: Context,
 ) -> None:
     ticket: TicketToolResult = mcp_server.submit_ticket(
         sample_park.name,
         "Broken bench",
+        ctx=mcp_user_context,
     )
 
     assert ticket["status"] == TicketStatus.OPEN
+    assert ticket["user_id"] is not None
 
 
 def test_submit_ticket_escapes_issue(
-    mcp_server: ChiparkMcpServer, sample_park: Park
+    mcp_server: ChiparkMcpServer,
+    sample_park: Park,
+    mcp_user_context: Context,
 ) -> None:
     ticket: TicketToolResult = mcp_server.submit_ticket(
         sample_park.name,
         "<script>alert('x')</script>",
+        ctx=mcp_user_context,
     )
 
     assert ticket["issue"] == "&lt;script&gt;alert(&#x27;x&#x27;)&lt;/script&gt;"
 
 
 def test_submit_ticket_uses_server_timestamp(
-    mcp_server: ChiparkMcpServer, sample_park: Park
+    mcp_server: ChiparkMcpServer,
+    sample_park: Park,
+    mcp_user_context: Context,
 ) -> None:
     request_started: datetime = datetime.now()
 
     ticket: TicketToolResult = mcp_server.submit_ticket(
         sample_park.name,
         "Broken bench",
+        ctx=mcp_user_context,
     )
 
     request_finished: datetime = datetime.now()
@@ -145,11 +218,14 @@ def test_submit_ticket_uses_server_timestamp(
 
 
 def test_submit_ticket_preserves_estimated_hours(
-    mcp_server: ChiparkMcpServer, sample_park: Park
+    mcp_server: ChiparkMcpServer,
+    sample_park: Park,
+    mcp_user_context: Context,
 ) -> None:
     ticket: TicketToolResult = mcp_server.submit_ticket(
         sample_park.name,
         "Broken bench",
+        ctx=mcp_user_context,
         estimated_hours=2.5,
     )
 
@@ -158,6 +234,81 @@ def test_submit_ticket_preserves_estimated_hours(
 
 def test_submit_ticket_rejects_unknown_park(
     mcp_server: ChiparkMcpServer,
+    mcp_user_context: Context,
 ) -> None:
     with pytest.raises(ValueError, match="Park 'Unknown Park' was not found"):
-        mcp_server.submit_ticket("Unknown Park", "Broken bench")
+        mcp_server.submit_ticket("Unknown Park", "Broken bench", ctx=mcp_user_context)
+
+
+def test_submit_ticket_requires_authentication(
+    mcp_server: ChiparkMcpServer,
+    sample_park: Park,
+    unauthenticated_context: Context,
+) -> None:
+    with pytest.raises(ValueError, match="valid bearer token"):
+        mcp_server.submit_ticket(
+            sample_park.name, "Broken bench", ctx=unauthenticated_context
+        )
+
+
+def test_close_ticket_rejects_regular_user(
+    mcp_server: ChiparkMcpServer,
+    mcp_user_context: Context,
+) -> None:
+    with pytest.raises(ValueError, match="Administrator privileges"):
+        mcp_server.close_ticket(1, ctx=mcp_user_context)
+
+
+def test_edit_ticket_rejects_regular_user(
+    mcp_server: ChiparkMcpServer,
+    mcp_user_context: Context,
+) -> None:
+    with pytest.raises(ValueError, match="Administrator privileges"):
+        mcp_server.edit_ticket(1, ctx=mcp_user_context, issue="Changed issue")
+
+
+def test_admin_can_close_ticket(
+    mcp_server: ChiparkMcpServer,
+    data_service: DataService,
+    sample_ticket: Ticket,
+    administrator_context: Context,
+) -> None:
+    saved_ticket: Ticket = data_service.add_ticket(sample_ticket)
+
+    closed_ticket: TicketToolResult = mcp_server.close_ticket(
+        saved_ticket.ticket_id, ctx=administrator_context
+    )
+
+    assert closed_ticket["status"] == TicketStatus.CLOSED
+
+
+def test_admin_can_edit_ticket(
+    mcp_server: ChiparkMcpServer,
+    data_service: DataService,
+    sample_ticket: Ticket,
+    administrator_context: Context,
+) -> None:
+    saved_ticket: Ticket = data_service.add_ticket(sample_ticket)
+
+    updated_ticket: TicketToolResult = mcp_server.edit_ticket(
+        saved_ticket.ticket_id,
+        ctx=administrator_context,
+        issue="Updated issue",
+    )
+
+    assert updated_ticket["issue"] == "Updated issue"
+
+
+def test_admin_can_delete_ticket(
+    mcp_server: ChiparkMcpServer,
+    data_service: DataService,
+    sample_ticket: Ticket,
+    administrator_context: Context,
+) -> None:
+    saved_ticket: Ticket = data_service.add_ticket(sample_ticket)
+
+    result: dict[str, bool] = mcp_server.delete_ticket(
+        saved_ticket.ticket_id, ctx=administrator_context
+    )
+
+    assert result == {"deleted": True}

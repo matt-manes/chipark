@@ -4,7 +4,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from ..models.ticket import Ticket, TicketStatus, TicketSubmission
+from ..models.ticket import Ticket, TicketStatus, TicketSubmission, TicketUpdate
+from ..models.user import User
+from ..services.auth_dependencies import AuthDependencies
 from ..services.data_service import DataService
 
 router: APIRouter = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -65,6 +67,7 @@ def get_ticket(
 def add_ticket(
     ticket_submission: TicketSubmission,
     data_service: Annotated[DataService, Depends(DataService.get_default_service)],
+    user: Annotated[User, Depends(AuthDependencies.require_user)],
 ) -> Ticket:
     """
     Create an open ticket after validating its park association.
@@ -98,6 +101,7 @@ def add_ticket(
         file_date=datetime.now(),
         estimated_hours=ticket_submission.estimated_hours,
         issue=escape(ticket_submission.issue),
+        user_id=user.user_id,
     )
     return data_service.add_ticket(ticket)
 
@@ -106,6 +110,7 @@ def add_ticket(
 def close_ticket(
     ticket_id: int,
     data_service: Annotated[DataService, Depends(DataService.get_default_service)],
+    user: Annotated[User, Depends(AuthDependencies.require_admin)],
 ) -> Ticket:
     """
     Mark a ticket as closed.
@@ -129,5 +134,44 @@ def close_ticket(
     """
     try:
         return data_service.close_ticket(ticket_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.patch("/{ticket_id}")
+def update_ticket(
+    ticket_id: int,
+    changes: TicketUpdate,
+    data_service: Annotated[DataService, Depends(DataService.get_default_service)],
+    user: Annotated[User, Depends(AuthDependencies.require_admin)],
+) -> Ticket:
+    """Update an existing ticket as an administrator."""
+    updates: dict[str, object] = changes.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(status_code=422, detail="At least one field is required.")
+    if "issue" in updates:
+        issue: object = updates["issue"]
+        if not isinstance(issue, str):
+            raise HTTPException(status_code=422, detail="Ticket issue cannot be null.")
+        updates["issue"] = escape(issue)
+    try:
+        return data_service.update_ticket(
+            ticket_id, TicketUpdate.model_validate(updates)
+        )
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.delete("/{ticket_id}", status_code=204)
+def delete_ticket(
+    ticket_id: int,
+    data_service: Annotated[DataService, Depends(DataService.get_default_service)],
+    user: Annotated[User, Depends(AuthDependencies.require_admin)],
+) -> None:
+    """Delete an existing ticket as an administrator."""
+    try:
+        data_service.delete_ticket(ticket_id)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error

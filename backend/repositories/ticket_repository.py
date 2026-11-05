@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-from ..models.ticket import Ticket, TicketStatus
+from ..models.ticket import Ticket, TicketStatus, TicketUpdate
 from .entities import TicketRecord
 
 
@@ -43,6 +43,7 @@ class TicketRepository:
                 file_date=ticket.file_date,
                 estimated_hours=ticket.estimated_hours,
                 issue=ticket.issue,
+                user_id=ticket.user_id,
             )
             session.add(record)
             session.flush()
@@ -115,6 +116,27 @@ class TicketRepository:
             session.flush()
             return self._to_model(record)
 
+    def update(self, ticket_id: int, changes: TicketUpdate) -> Ticket:
+        """Update supplied editable fields and return the persisted ticket."""
+        with self._session_factory.begin() as session:
+            record: TicketRecord | None = session.get(TicketRecord, ticket_id)
+            if record is None:
+                raise LookupError(f"Ticket {ticket_id} was not found")
+            for field_name, value in changes.model_dump(exclude_unset=True).items():
+                if field_name == "issue" and value is None:
+                    raise ValueError("A ticket issue cannot be null.")
+                setattr(record, field_name, value)
+            session.flush()
+            return self._to_model(record)
+
+    def delete(self, ticket_id: int) -> None:
+        """Delete a ticket by its database identifier."""
+        with self._session_factory.begin() as session:
+            record: TicketRecord | None = session.get(TicketRecord, ticket_id)
+            if record is None:
+                raise LookupError(f"Ticket {ticket_id} was not found")
+            session.delete(record)
+
     @staticmethod
     def _to_model(record: TicketRecord) -> Ticket:
         """
@@ -137,4 +159,5 @@ class TicketRepository:
             estimated_hours=record.estimated_hours,
             issue=record.issue,
             ticket_id=record.ticket_id,
+            user_id=record.user_id,
         )

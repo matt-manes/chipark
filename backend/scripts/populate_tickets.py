@@ -12,7 +12,9 @@ class TicketDatabasePopulator:
 
     def __init__(self) -> None:
         """Create the database service used to populate ticket records."""
-        self._database: Database = DatabaseFactory.get_database(Config().database)
+        self._database: Database = DatabaseFactory.get_database(
+            Config().CHIPARK_DATABASE
+        )
         self._data_service: DataService = DataService(self._database)
         self._starting_count: int = len(self._data_service.get_tickets())
 

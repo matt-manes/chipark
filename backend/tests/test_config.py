@@ -20,47 +20,75 @@ class UnsupportedTypeConfig(Config):
 @pytest.fixture(autouse=True)
 def reset_config_singleton(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(Config, "_instance", None)
-    monkeypatch.delenv("database", raising=False)
+    monkeypatch.delenv("CHIPARK_DATABASE", raising=False)
+    monkeypatch.delenv("CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL", raising=False)
 
 
 def test_loads_database_from_toml(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     config_path: Path = tmp_path / "config.toml"
-    config_path.write_text('database = "sqlite"\n', encoding="utf-8")
+    config_path.write_text(
+        'CHIPARK_DATABASE = "sqlite"\n'
+        "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL = "
+        '"http://localhost:3000/auth/callback"\n',
+        encoding="utf-8",
+    )
     monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
 
     config: Config = Config()
 
-    assert config.database == "sqlite"
+    assert config.CHIPARK_DATABASE == "sqlite"
+    assert (
+        config.CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL
+        == "http://localhost:3000/auth/callback"
+    )
 
 
 def test_environment_value_overrides_toml(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     config_path: Path = tmp_path / "config.toml"
-    config_path.write_text('database = "sqlite"\n', encoding="utf-8")
+    config_path.write_text(
+        'CHIPARK_DATABASE = "sqlite"\n'
+        "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL = "
+        '"http://localhost:3000/auth/callback"\n',
+        encoding="utf-8",
+    )
     monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
-    monkeypatch.setenv("database", "postgresql")
+    monkeypatch.setenv("CHIPARK_DATABASE", "postgresql")
+    monkeypatch.setenv(
+        "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL",
+        "https://frontend.example.com/auth/callback",
+    )
 
     config: Config = Config()
 
-    assert config.database == "postgresql"
+    assert config.CHIPARK_DATABASE == "postgresql"
+    assert (
+        config.CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL
+        == "https://frontend.example.com/auth/callback"
+    )
 
 
 def test_reuses_singleton_without_reloading(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     config_path: Path = tmp_path / "config.toml"
-    config_path.write_text('database = "sqlite"\n', encoding="utf-8")
+    config_path.write_text(
+        'CHIPARK_DATABASE = "sqlite"\n'
+        "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL = "
+        '"http://localhost:3000/auth/callback"\n',
+        encoding="utf-8",
+    )
     monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
 
     first_config: Config = Config()
-    config_path.write_text('database = "postgresql"\n', encoding="utf-8")
+    config_path.write_text('CHIPARK_DATABASE = "postgresql"\n', encoding="utf-8")
     second_config: Config = Config()
 
     assert second_config is first_config
-    assert second_config.database == "sqlite"
+    assert second_config.CHIPARK_DATABASE == "sqlite"
 
 
 def test_raises_when_field_is_missing_from_toml_and_environment(
@@ -70,7 +98,7 @@ def test_raises_when_field_is_missing_from_toml_and_environment(
     config_path.write_text("", encoding="utf-8")
     monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
 
-    with pytest.raises(ConfigError, match="database.*missing"):
+    with pytest.raises(ConfigError, match="CHIPARK_DATABASE.*missing"):
         Config()
 
 
@@ -83,7 +111,12 @@ def test_config_wraps_invalid_environment_value_with_field_name(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     config_path: Path = tmp_path / "config.toml"
-    config_path.write_text('database = "sqlite"\n', encoding="utf-8")
+    config_path.write_text(
+        'CHIPARK_DATABASE = "sqlite"\n'
+        "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL = "
+        '"http://localhost:3000/auth/callback"\n',
+        encoding="utf-8",
+    )
     monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
     monkeypatch.setenv("enabled", "yes")
 
@@ -95,7 +128,12 @@ def test_config_wraps_unsupported_environment_type_with_field_name(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     config_path: Path = tmp_path / "config.toml"
-    config_path.write_text('database = "sqlite"\n', encoding="utf-8")
+    config_path.write_text(
+        'CHIPARK_DATABASE = "sqlite"\n'
+        "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL = "
+        '"http://localhost:3000/auth/callback"\n',
+        encoding="utf-8",
+    )
     monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
     monkeypatch.setenv("options", "value")
 

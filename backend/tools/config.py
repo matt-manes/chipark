@@ -62,8 +62,8 @@ class Config:
     """
     Load application settings once from TOML and matching environment variables.
 
-    Each annotated dataclass field is loaded from the matching TOML key and may
-    be overridden by an environment variable with the same name.
+    Each annotated dataclass field is loaded from the same-named TOML key and
+    may be overridden by an environment variable with the same name.
 
     Notes
     -----
@@ -73,8 +73,8 @@ class Config:
 
     _instance: ClassVar[Self | None] = None
     _lock: ClassVar[Lock] = Lock()
-
-    database: str
+    CHIPARK_DATABASE: str
+    CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL: str
 
     def __new__(cls) -> Self:
         """

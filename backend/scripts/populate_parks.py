@@ -12,7 +12,9 @@ class ParkDatabasePopulator:
 
     def __init__(self) -> None:
         """Create the database-backed data service used for population."""
-        self._database: Database = DatabaseFactory.get_database(Config().database)
+        self._database: Database = DatabaseFactory.get_database(
+            Config().CHIPARK_DATABASE
+        )
         self._data_service: DataService = DataService(self._database)
         self._park_nos: set[str] = {
             park.park_no for park in self._data_service.get_parks()

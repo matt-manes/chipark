@@ -4,7 +4,7 @@ from typing import Self
 from starlette.requests import Request
 
 from ..models.park import Park
-from ..models.ticket import Ticket
+from ..models.ticket import Ticket, TicketUpdate
 from ..repositories import Database, ParkRepository, TicketRepository
 
 
@@ -194,6 +194,14 @@ class DataService:
             If no ticket has the requested identifier.
         """
         return self._ticket_repository.close(ticket_id)
+
+    def update_ticket(self, ticket_id: int, changes: TicketUpdate) -> Ticket:
+        """Update editable fields on an existing ticket."""
+        return self._ticket_repository.update(ticket_id, changes)
+
+    def delete_ticket(self, ticket_id: int) -> None:
+        """Delete an existing ticket."""
+        self._ticket_repository.delete(ticket_id)
 
     def close(self) -> None:
         """Dispose of the database engine owned by this service."""

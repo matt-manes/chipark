@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class TicketStatus(Enum):
@@ -29,6 +29,8 @@ class Ticket:
         Estimated work duration in hours, if available.
     issue : str
         Description of the reported issue.
+    user_id : int or None, default=None
+        Identifier of the account that submitted the ticket, if available.
     ticket_id : int, default=-1
         Database identifier; negative values indicate an unpersisted ticket.
     """
@@ -39,6 +41,7 @@ class Ticket:
     estimated_hours: float | None
     issue: str
     ticket_id: int = -1
+    user_id: int | None = None
 
 
 class TicketSubmission(BaseModel):
@@ -57,3 +60,12 @@ class TicketSubmission(BaseModel):
     park_name: str
     estimated_hours: float | None = None
     issue: str
+
+
+class TicketUpdate(BaseModel):
+    """Represent editable ticket fields for administrative updates."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    estimated_hours: float | None = None
+    issue: str | None = None

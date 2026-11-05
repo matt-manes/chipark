@@ -4,12 +4,16 @@ from html import escape
 from typing import ClassVar
 
 from mcp.server import MCPServer
+from mcp.server.mcpserver.context import Context
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from starlette.applications import Starlette
+from starlette.requests import Request
 from starlette.types import Receive, Scope, Send
 
 from ..models.park import Park
-from ..models.ticket import Ticket, TicketStatus
+from ..models.ticket import Ticket, TicketStatus, TicketUpdate
+from ..models.user import User, UserRole
+from ..services.auth_service import AuthService
 from ..services.data_service import DataService
 
 ParkToolResult = dict[str, str | int | float | None]
@@ -43,7 +47,15 @@ class ChiparkMcpServer:
         "list_parks": "List all parks.",
         "list_tickets": "List all tickets.",
         "get_park": "Get a park by its database ID.",
-        "submit_ticket": "Submit an open ticket for an existing park.",
+        "submit_ticket": (
+            "Submit a ticket for an existing park using an authenticated account."
+        ),
+        "close_ticket": "Close an existing ticket. Requires an administrator account.",
+        "edit_ticket": (
+            "Edit estimated hours or issue on an existing ticket. "
+            "Requires an administrator account."
+        ),
+        "delete_ticket": "Delete an existing ticket. Requires an administrator account.",
     }
 
     def __init__(self) -> None:
@@ -55,6 +67,9 @@ class ChiparkMcpServer:
         self._server.tool()(self.list_tickets)
         self._server.tool()(self.get_park)
         self._server.tool()(self.submit_ticket)
+        self._server.tool()(self.close_ticket)
+        self._server.tool()(self.edit_ticket)
+        self._server.tool()(self.delete_ticket)
 
     def asgi_app(self) -> Starlette:
         """
@@ -150,6 +165,7 @@ class ChiparkMcpServer:
         self,
         park_name: str,
         issue: str,
+        ctx: Context,
         estimated_hours: float | None = None,
     ) -> TicketToolResult:
         """
@@ -172,8 +188,9 @@ class ChiparkMcpServer:
         Raises
         ------
         ValueError
-            If the park does not exist.
+            If the request is unauthenticated or the park does not exist.
         """
+        user: User = self._require_mcp_user(ctx)
         data_service: DataService = self._require_data_service()
         if not data_service.park_exists(park_name):
             raise ValueError(f"Park '{park_name}' was not found.")
@@ -184,15 +201,86 @@ class ChiparkMcpServer:
             file_date=datetime.now(),
             estimated_hours=estimated_hours,
             issue=escape(issue),
+            user_id=user.user_id,
         )
         saved_ticket: Ticket = data_service.add_ticket(ticket)
         return self._ticket_to_result(saved_ticket)
+
+    def close_ticket(self, ticket_id: int, ctx: Context) -> TicketToolResult:
+        """Close a ticket after verifying administrator privileges."""
+        self._require_mcp_admin(ctx)
+        try:
+            ticket: Ticket = self._require_data_service().close_ticket(ticket_id)
+        except LookupError as error:
+            raise ValueError(str(error)) from error
+        return self._ticket_to_result(ticket)
+
+    def edit_ticket(
+        self,
+        ticket_id: int,
+        ctx: Context,
+        estimated_hours: float | None = None,
+        issue: str | None = None,
+        clear_estimated_hours: bool = False,
+    ) -> TicketToolResult:
+        """Edit supplied ticket fields after verifying administrator privileges."""
+        self._require_mcp_admin(ctx)
+        data_service: DataService = self._require_data_service()
+        updates: dict[str, object] = {}
+        if estimated_hours is not None:
+            if clear_estimated_hours:
+                raise ValueError(
+                    "Specify an estimated value or clear it, but not both."
+                )
+            updates["estimated_hours"] = estimated_hours
+        elif clear_estimated_hours:
+            updates["estimated_hours"] = None
+        if issue is not None:
+            updates["issue"] = escape(issue)
+        if not updates:
+            raise ValueError("At least one editable ticket field is required.")
+        try:
+            ticket: Ticket = data_service.update_ticket(
+                ticket_id, TicketUpdate.model_validate(updates)
+            )
+        except LookupError as error:
+            raise ValueError(str(error)) from error
+        return self._ticket_to_result(ticket)
+
+    def delete_ticket(self, ticket_id: int, ctx: Context) -> dict[str, bool]:
+        """Delete a ticket after verifying administrator privileges."""
+        self._require_mcp_admin(ctx)
+        try:
+            self._require_data_service().delete_ticket(ticket_id)
+        except LookupError as error:
+            raise ValueError(str(error)) from error
+        return {"deleted": True}
 
     def _require_data_service(self) -> DataService:
         """Return the active app-scoped service or raise if the app is stopped."""
         if self._data_service is None:
             raise RuntimeError("The Chipark application lifespan is not active.")
         return self._data_service
+
+    def _require_mcp_user(self, context: Context) -> User:
+        """Authenticate a bearer token from the current MCP HTTP request."""
+        request: object = context.request_context.request
+        if not isinstance(request, Request):
+            raise TypeError("A bearer token is required for this MCP tool.")
+        auth_service: AuthService = request.app.state.auth_service
+        user: User | None = auth_service.authenticate_authorization_header(
+            request.headers.get("authorization")
+        )
+        if user is None:
+            raise ValueError("A valid bearer token is required for this MCP tool.")
+        return user
+
+    def _require_mcp_admin(self, context: Context) -> User:
+        """Authenticate the MCP request and require an administrator role."""
+        user: User = self._require_mcp_user(context)
+        if user.role is not UserRole.ADMIN:
+            raise ValueError("Administrator privileges are required.")
+        return user
 
     @staticmethod
     def _park_to_result(park: Park) -> ParkToolResult:

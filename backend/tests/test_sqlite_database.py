@@ -9,7 +9,17 @@ from backend.repositories.sqlite_database import SqliteDatabase
 
 def test_creates_schema(database: SqliteDatabase) -> None:
     table_names: list[str] = inspect(database.engine).get_table_names()
-    assert table_names == ["parks", "tickets"]
+    assert table_names == [
+        "access_tokens",
+        "oauth_states",
+        "parks",
+        "tickets",
+        "users",
+    ]
+    ticket_columns: set[str] = {
+        column["name"] for column in inspect(database.engine).get_columns("tickets")
+    }
+    assert "user_id" in ticket_columns
 
 
 def test_creates_database_parent_directory(tmp_path: Path) -> None:
