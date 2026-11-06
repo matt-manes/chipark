@@ -7,8 +7,8 @@ from backend.repositories.park_repository import ParkRepository
 from backend.repositories.sqlite_database import SqliteDatabase
 
 
-def test_creates_schema(database: SqliteDatabase) -> None:
-    table_names: list[str] = inspect(database.engine).get_table_names()
+def test_creates_schema(sqlite_database: SqliteDatabase) -> None:
+    table_names: list[str] = inspect(sqlite_database.engine).get_table_names()
     assert table_names == [
         "access_tokens",
         "oauth_states",
@@ -17,7 +17,8 @@ def test_creates_schema(database: SqliteDatabase) -> None:
         "users",
     ]
     ticket_columns: set[str] = {
-        column["name"] for column in inspect(database.engine).get_columns("tickets")
+        column["name"]
+        for column in inspect(sqlite_database.engine).get_columns("tickets")
     }
     assert "user_id" in ticket_columns
 

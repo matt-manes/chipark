@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from ..models.park import Park
+from ..tools.accent_normalizer import AccentNormalizer
 from .entities import ParkRecord
 
 
@@ -39,13 +40,17 @@ class ParkRepository:
             record = ParkRecord(
                 park_id=park.park_id if park.park_id >= 0 else None,
                 park_no=park.park_no,
-                name=park.name,
-                street=park.street,
+                name=AccentNormalizer.remove_accents(park.name),
+                street=(
+                    None
+                    if park.street is None
+                    else AccentNormalizer.remove_accents(park.street)
+                ),
                 zip_code=park.zip_code,
                 acres=park.acres,
                 ward=park.ward,
                 park_class=park.park_class,
-                label=park.label,
+                label=AccentNormalizer.remove_accents(park.label),
                 lat=park.lat,
                 lon=park.lon,
             )

@@ -15,7 +15,8 @@ git clone ****
 cd backend
 uv sync
 cd ..
-uv run --project backend python -m backend.tools.populate_parks
+uv run --project backend python -m backend.scripts.populate_parks
+uv run --project backend python -m backend.scripts.populate_tickets
 ```
 
 The `backend.repositories` package provides SQLite-backed repositories for the
@@ -43,13 +44,25 @@ revokes the token; `GET /auth/me` returns the current account.
 
 Google sign-in is available through `GET /auth/google`. The configuration keys
 in `config.toml` are the same names used for environment variables:
-`CHIPARK_DATABASE` and `CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL`. Configure
+`CHIPARK_DATABASE`, `CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL`, and
+`CHIPARK_PG_URL`. Configure
 `CHIPARK_GOOGLE_CLIENT_ID`, `CHIPARK_GOOGLE_CLIENT_SECRET`, and
 `CHIPARK_GOOGLE_REDIRECT_URI`; register the backend callback URL
 `/auth/google/callback` with Google. The callback redirects to
 `CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL` with the bearer token in the URL
 fragment. The configured value currently uses the temporary
 `http://localhost:3000/auth/callback` placeholder.
+
+To use PostgreSQL, set `CHIPARK_DATABASE` to `postgresql`, configure
+`CHIPARK_PG_URL` with the SQLAlchemy URL excluding credentials, and provide
+`CHIPARK_PG_USER` and `CHIPARK_PG_PASS` through the environment.
+
+Tests use SQLite by default. To run them against PostgreSQL, set
+`CHIPARK_TEST_PG_URL` to a dedicated PostgreSQL test database URL whose database
+name contains `test`, and set `CHIPARK_PG_USER` and `CHIPARK_PG_PASS`. Each test
+creates a uniquely named schema and drops it afterward, keeping test tables and
+sequences isolated from other runs. Do not point this URL at a development or
+production database.
 
 Any authenticated user can submit tickets. Only administrators can edit tickets
 with `PATCH /tickets/{ticket_id}`, close tickets with

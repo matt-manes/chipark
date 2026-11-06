@@ -18,6 +18,22 @@ def test_add_assigns_generated_id(
     assert saved_ticket.ticket_id > 0
 
 
+def test_add_removes_accents_from_park_name_and_issue(
+    park_repository: ParkRepository,
+    ticket_repository: TicketRepository,
+    sample_park: Park,
+    sample_ticket: Ticket,
+) -> None:
+    park_repository.add(sample_park)
+    sample_ticket.park_name = "Sámple Park"
+    sample_ticket.issue = "HONORÉ bench"
+
+    saved_ticket: Ticket = ticket_repository.add(sample_ticket)
+
+    assert saved_ticket.park_name == "Sample Park"
+    assert saved_ticket.issue == "HONORE bench"
+
+
 def test_get_returns_saved_ticket(
     park_repository: ParkRepository,
     ticket_repository: TicketRepository,
@@ -111,6 +127,22 @@ def test_update_rejects_null_issue(
 
     with pytest.raises(ValueError, match="issue cannot be null"):
         ticket_repository.update(saved_ticket.ticket_id, TicketUpdate(issue=None))
+
+
+def test_update_removes_accents_from_issue(
+    park_repository: ParkRepository,
+    ticket_repository: TicketRepository,
+    sample_park: Park,
+    sample_ticket: Ticket,
+) -> None:
+    park_repository.add(sample_park)
+    saved_ticket: Ticket = ticket_repository.add(sample_ticket)
+
+    updated_ticket: Ticket = ticket_repository.update(
+        saved_ticket.ticket_id, TicketUpdate(issue="HONORÉ bench")
+    )
+
+    assert updated_ticket.issue == "HONORE bench"
 
 
 def test_delete_raises_for_missing_ticket(

@@ -1,4 +1,6 @@
+from ..tools.config import Config
 from .database import Database
+from .postgresql_database import PostgresqlDatabase
 from .sqlite_database import SqliteDatabase
 
 
@@ -31,4 +33,6 @@ class DatabaseFactory:
         """
         if database_type.casefold() == "sqlite":
             return SqliteDatabase()
+        if database_type.casefold() in {"postgresql", "postgres"}:
+            return PostgresqlDatabase(Config().CHIPARK_PG_URL)
         raise DatabaseFactoryError(f"Unsupported database type '{database_type}'.")

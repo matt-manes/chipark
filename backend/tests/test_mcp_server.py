@@ -268,7 +268,7 @@ def test_submit_ticket_rejects_non_http_request_context(
     mcp_server: ChiparkMcpServer,
     mcp_user_context: Context,
 ) -> None:
-    setattr(mcp_user_context.request_context, "request", object())
+    mcp_user_context.request_context.request = object()
 
     with pytest.raises(TypeError, match="bearer token is required"):
         mcp_server.submit_ticket("Sample Park", "Broken bench", ctx=mcp_user_context)

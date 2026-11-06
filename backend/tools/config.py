@@ -75,6 +75,7 @@ class Config:
     _lock: ClassVar[Lock] = Lock()
     CHIPARK_DATABASE: str
     CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL: str
+    CHIPARK_PG_URL: str
 
     def __new__(cls) -> Self:
         """

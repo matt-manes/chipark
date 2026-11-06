@@ -46,5 +46,5 @@ def load_from_json(path: Path = DEFAULT_PATH) -> list[Ticket]:
     list[Ticket]
         Ticket models converted from the file's records.
     """
-    data: list[dict[str, Any]] = json.loads(path.read_text())
+    data: list[dict[str, Any]] = json.loads(path.read_text("utf-8"))
     return [to_ticket(datum) for datum in data]

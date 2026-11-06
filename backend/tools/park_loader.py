@@ -98,5 +98,5 @@ def load_from_geojson(path: Path = DEFAULT_PATH) -> list[Park]:
     list[Park]
         Parks converted from the file's features.
     """
-    data: dict[str, Any] = json.loads(path.read_text())
+    data: dict[str, Any] = json.loads(path.read_text("utf-8"))
     return [to_park(feature) for feature in data["features"]]

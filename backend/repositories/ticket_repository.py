@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from ..models.ticket import Ticket, TicketStatus, TicketUpdate
+from ..tools.accent_normalizer import AccentNormalizer
 from .entities import TicketRecord
 
 
@@ -38,11 +39,11 @@ class TicketRepository:
         with self._session_factory.begin() as session:
             record = TicketRecord(
                 ticket_id=ticket.ticket_id if ticket.ticket_id >= 0 else None,
-                park_name=ticket.park_name,
+                park_name=AccentNormalizer.remove_accents(ticket.park_name),
                 status=ticket.status,
                 file_date=ticket.file_date,
                 estimated_hours=ticket.estimated_hours,
-                issue=ticket.issue,
+                issue=AccentNormalizer.remove_accents(ticket.issue),
                 user_id=ticket.user_id,
             )
             session.add(record)
@@ -146,8 +147,11 @@ class TicketRepository:
                 if field_name == "issue":
                     if value is None:
                         raise ValueError("A ticket issue cannot be null.")
+                    if not isinstance(value, str):
+                        raise ValueError("A ticket issue must be text.")
                     if not value.strip():
                         raise ValueError("A ticket issue cannot be empty.")
+                    value = AccentNormalizer.remove_accents(value)
                 setattr(record, field_name, value)
             session.flush()
             return self._to_model(record)

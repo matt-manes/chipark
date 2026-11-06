@@ -32,6 +32,29 @@ def test_add_preserves_park_fields(
     )
 
 
+def test_add_removes_accents_from_selected_text_fields(
+    park_repository: ParkRepository,
+) -> None:
+    park: Park = Park(
+        park_no="P003",
+        name="HONORÉ Park",
+        street="Rue HONORÉ",
+        zip_code="60601",
+        acres="10",
+        ward="1",
+        park_class="NEIGHBORHOOD PARK",
+        label="HONORÉ",
+        lat=41.88,
+        lon=-87.63,
+    )
+
+    saved_park: Park = park_repository.add(park)
+
+    assert saved_park.name == "HONORE Park"
+    assert saved_park.street == "Rue HONORE"
+    assert saved_park.label == "HONORE"
+
+
 def test_get_all_returns_parks_in_id_order(
     park_repository: ParkRepository, sample_park: Park, sample_park2: Park
 ) -> None:
