@@ -8,6 +8,7 @@ from backend.tools.config import Config, ConfigError, EnvValueParser
 
 DEFAULT_CONFIG_SETTINGS: str = (
     'CHIPARK_DATABASE = "sqlite"\n'
+    "CHIPARK_CONDITIONS_TTL = 900\n"
     "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL = "
     '"http://localhost:3000/auth/callback"\n'
     'CHIPARK_PG_URL = "postgresql+psycopg2://localhost:5432/chipark"\n'
@@ -39,6 +40,7 @@ def write_default_config(config_path: Path) -> None:
 def reset_config_singleton(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(Config, "_instance", None)
     monkeypatch.delenv("CHIPARK_DATABASE", raising=False)
+    monkeypatch.delenv("CHIPARK_CONDITIONS_TTL", raising=False)
     monkeypatch.delenv("CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL", raising=False)
     monkeypatch.delenv("CHIPARK_PG_URL", raising=False)
 
@@ -53,6 +55,7 @@ def test_loads_database_from_toml(
     config: Config = Config()
 
     assert config.CHIPARK_DATABASE == "sqlite"
+    assert config.CHIPARK_CONDITIONS_TTL == 900
     assert (
         config.CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL
         == "http://localhost:3000/auth/callback"
@@ -67,6 +70,7 @@ def test_environment_value_overrides_toml(
     write_default_config(config_path)
     monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
     monkeypatch.setenv("CHIPARK_DATABASE", "postgresql")
+    monkeypatch.setenv("CHIPARK_CONDITIONS_TTL", "300")
     monkeypatch.setenv(
         "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL",
         "https://frontend.example.com/auth/callback",
@@ -76,6 +80,7 @@ def test_environment_value_overrides_toml(
     config: Config = Config()
 
     assert config.CHIPARK_DATABASE == "postgresql"
+    assert config.CHIPARK_CONDITIONS_TTL == 300
     assert (
         config.CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL
         == "https://frontend.example.com/auth/callback"

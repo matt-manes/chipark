@@ -26,4 +26,4 @@ quality-checks = "scripts.run_quality_checks:main"
 packages = ["scripts"]
 
 [tool.ruff.lint]
-ignore = ["I001"]
+ignore = ["I001", "BLE001"]

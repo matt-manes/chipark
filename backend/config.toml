@@ -1,3 +1,4 @@
 CHIPARK_DATABASE="postgresql"
+CHIPARK_CONDITIONS_TTL=900
 CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL="http://localhost:3000/auth/callback"
 CHIPARK_PG_URL="postgresql+psycopg2://localhost:5432/chipark"

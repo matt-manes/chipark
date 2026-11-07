@@ -1,12 +1,21 @@
+from dataclasses import replace
+from datetime import datetime, timedelta
+from types import SimpleNamespace
+from unittest.mock import Mock
+
 import pytest
 from fastapi import FastAPI
 from starlette.requests import Request
 
+from backend.clients.weatherapi_client import WeatherApiClient
+from backend.models.conditions import Conditions
 from backend.models.notification import Notification
 from backend.models.park import Park
 from backend.models.ticket import Ticket, TicketStatus, TicketUpdate
 from backend.models.user import User
+from backend.repositories.conditions_repository import ConditionsRepository
 from backend.repositories.database import Database
+from backend.services import data_service as data_service_module
 from backend.services.data_service import DataService
 
 
@@ -23,6 +32,22 @@ def _create_notifications(
     for issue in issues:
         data_service.update_ticket(saved_ticket.ticket_id, TicketUpdate(issue=issue))
     return data_service.get_notifications(sample_user.user_id)
+
+
+def _stub_weather_client(
+    monkeypatch: pytest.MonkeyPatch,
+    conditions: Conditions,
+    ttl_seconds: int = 900,
+) -> Mock:
+    weather_client: Mock = Mock(spec=WeatherApiClient)
+    weather_client.get_current_conditions.return_value = conditions
+    monkeypatch.setattr(data_service_module, "WeatherApiClient", lambda: weather_client)
+    monkeypatch.setattr(
+        data_service_module,
+        "Config",
+        lambda: SimpleNamespace(CHIPARK_CONDITIONS_TTL=ttl_seconds),
+    )
+    return weather_client
 
 
 def test_add_and_get_parks(database: Database, sample_park: Park) -> None:
@@ -197,6 +222,118 @@ def test_mark_notification_read_returns_read_notification(
     )
 
     assert result.read_at is not None
+
+
+def test_get_conditions_fetches_and_caches_missing_entry(
+    database: Database,
+    monkeypatch: pytest.MonkeyPatch,
+    sample_park: Park,
+    sample_conditions: Conditions,
+) -> None:
+    data_service: DataService = DataService(database)
+    saved_park: Park = data_service.add_park(sample_park)
+    conditions_repository: ConditionsRepository = ConditionsRepository(
+        database.session_factory
+    )
+    weather_client: Mock = _stub_weather_client(monkeypatch, sample_conditions)
+
+    result: Conditions | None = data_service.get_conditions(saved_park.park_id)
+
+    assert result == sample_conditions
+    assert conditions_repository.get_for_park(saved_park.park_id) == sample_conditions
+    weather_client.get_current_conditions.assert_called_once_with(
+        saved_park.lat, saved_park.lon
+    )
+
+
+def test_get_conditions_uses_fresh_cached_entry(
+    database: Database,
+    monkeypatch: pytest.MonkeyPatch,
+    sample_park: Park,
+    sample_conditions: Conditions,
+) -> None:
+    data_service: DataService = DataService(database)
+    saved_park: Park = data_service.add_park(sample_park)
+    cached_conditions: Conditions = replace(
+        sample_conditions, temp_f=61.0, condition="Rainy"
+    )
+    ConditionsRepository(database.session_factory).add(
+        saved_park.park_id, cached_conditions
+    )
+    weather_client: Mock = _stub_weather_client(monkeypatch, sample_conditions)
+
+    result: Conditions | None = data_service.get_conditions(saved_park.park_id)
+
+    assert result == cached_conditions
+    weather_client.get_current_conditions.assert_not_called()
+
+
+def test_get_conditions_refreshes_expired_cached_entry(
+    database: Database,
+    monkeypatch: pytest.MonkeyPatch,
+    sample_park: Park,
+    sample_conditions: Conditions,
+) -> None:
+    data_service: DataService = DataService(database)
+    saved_park: Park = data_service.add_park(sample_park)
+    expired_conditions: Conditions = replace(
+        sample_conditions,
+        last_updated=datetime.now() - timedelta(minutes=30),
+    )
+    conditions_repository: ConditionsRepository = ConditionsRepository(
+        database.session_factory
+    )
+    conditions_repository.add(saved_park.park_id, expired_conditions)
+    weather_client: Mock = _stub_weather_client(monkeypatch, sample_conditions)
+
+    result: Conditions | None = data_service.get_conditions(saved_park.park_id)
+
+    assert result == sample_conditions
+    assert conditions_repository.get_for_park(saved_park.park_id) == sample_conditions
+    weather_client.get_current_conditions.assert_called_once_with(
+        saved_park.lat, saved_park.lon
+    )
+
+
+def test_get_conditions_raises_for_missing_park(
+    database: Database,
+    monkeypatch: pytest.MonkeyPatch,
+    sample_conditions: Conditions,
+) -> None:
+    data_service: DataService = DataService(database)
+    weather_client: Mock = _stub_weather_client(monkeypatch, sample_conditions)
+
+    with pytest.raises(LookupError, match="Park 42 was not found"):
+        data_service.get_conditions(42)
+
+    weather_client.get_current_conditions.assert_not_called()
+
+
+def test_get_park_with_conditions_populates_conditions(
+    database: Database,
+    monkeypatch: pytest.MonkeyPatch,
+    sample_park: Park,
+    sample_conditions: Conditions,
+) -> None:
+    data_service: DataService = DataService(database)
+    saved_park: Park = data_service.add_park(sample_park)
+    _stub_weather_client(monkeypatch, sample_conditions)
+
+    park: Park = data_service.get_park_with_conditions(saved_park.park_id)
+
+    assert park.conditions == sample_conditions
+
+
+def test_get_park_leaves_conditions_unset(
+    database: Database,
+    sample_park: Park,
+) -> None:
+    data_service: DataService = DataService(database)
+    saved_park: Park = data_service.add_park(sample_park)
+
+    park: Park = data_service.get_park(saved_park.park_id)
+
+    assert park.conditions is None
 
 
 def test_default_service_returns_service_from_app_state(

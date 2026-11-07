@@ -8,10 +8,12 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, make_url
 
+from backend.models.conditions import Conditions
 from backend.models.park import Park
 from backend.models.ticket import Ticket, TicketStatus
 from backend.models.user import User
 from backend.repositories.auth_repository import AuthRepository
+from backend.repositories.conditions_repository import ConditionsRepository
 from backend.repositories.database import Database
 from backend.repositories.notification_repository import NotificationRepository
 from backend.repositories.park_repository import ParkRepository
@@ -147,9 +149,33 @@ def notification_repository(database: Database) -> NotificationRepository:
 
 
 @pytest.fixture
+def conditions_repository(database: Database) -> ConditionsRepository:
+    return ConditionsRepository(database.session_factory)
+
+
+@pytest.fixture
 def sample_user(database: Database) -> User:
     return AuthRepository(database.session_factory).create_user(
         "notification-user@example.com", None
+    )
+
+
+@pytest.fixture
+def sample_conditions() -> Conditions:
+    return Conditions(
+        last_updated=datetime.now(),
+        temp_f=72.0,
+        condition="Sunny",
+        wind_mph=5.0,
+        wind_dir="N",
+        precip_in=0.0,
+        humidity=40.0,
+        cloud=10.0,
+        feels_like_f=72.0,
+        heat_index_f=72.0,
+        uv=5.0,
+        chance_of_rain=0.0,
+        chance_of_snow=0.0,
     )
 
 

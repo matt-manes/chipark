@@ -44,9 +44,10 @@ revokes the token; `GET /auth/me` returns the current account.
 
 Google sign-in is available through `GET /auth/google`. The configuration keys
 in `config.toml` are the same names used for environment variables:
-`CHIPARK_DATABASE`, `CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL`, and
-`CHIPARK_PG_URL`. Configure
-`CHIPARK_GOOGLE_CLIENT_ID`, `CHIPARK_GOOGLE_CLIENT_SECRET`, and
+`CHIPARK_DATABASE`, `CHIPARK_CONDITIONS_TTL`,
+`CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL`, and `CHIPARK_PG_URL`. The conditions
+cache TTL is measured in seconds and defaults to 900 seconds (15 minutes).
+Configure `CHIPARK_GOOGLE_CLIENT_ID`, `CHIPARK_GOOGLE_CLIENT_SECRET`, and
 `CHIPARK_GOOGLE_REDIRECT_URI`; register the backend callback URL
 `/auth/google/callback` with Google. The callback redirects to
 `CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL` with the bearer token in the URL

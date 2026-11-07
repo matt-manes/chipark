@@ -8,22 +8,71 @@ from backend.models.conditions import Conditions
 
 
 class WeatherApiClient:
+    """Fetch current weather conditions from WeatherAPI.
+
+    The API key is read from the ``CHIPARK_WEATHERAPI_KEY`` environment
+    variable when the client is constructed.
+    """
+
     _WEATHERAPI_KEY_VARIABLE: str = "CHIPARK_WEATHERAPI_KEY"
 
     def __init__(self) -> None:
+        """Initialize the client with its configured API key.
+
+        Raises
+        ------
+        ValueError
+            If the WeatherAPI key is not configured.
+        """
         self._api_key: str = self._load_api_key()
 
     @property
     def _base_url(self) -> str:
+        """Return the current-conditions endpoint with the API key."""
         return f"https://api.weatherapi.com/v1/current.json?key={self._api_key}"
 
     def _load_api_key(self) -> str:
+        """Read the WeatherAPI key from the process environment.
+
+        Returns
+        -------
+        str
+            Configured API key.
+
+        Raises
+        ------
+        ValueError
+            If the environment variable is missing or empty.
+        """
         _api_key: str | None = os.environ.get(self._WEATHERAPI_KEY_VARIABLE)
         if not _api_key:
             raise ValueError("No weatherapi key set in environment.")
         return _api_key
 
     def get_current_conditions(self, lat: float, lon: float) -> Conditions:
+        """Fetch current weather conditions for the given coordinates.
+
+        Parameters
+        ----------
+        lat : float
+            Latitude of the location.
+        lon : float
+            Longitude of the location.
+
+        Returns
+        -------
+        Conditions
+            Current weather conditions returned by WeatherAPI.
+
+        Raises
+        ------
+        requests.HTTPError
+            If WeatherAPI returns an unsuccessful HTTP status.
+        requests.RequestException
+            If the request cannot be completed.
+        KeyError
+            If the response is missing an expected field.
+        """
         url: str = f"{self._base_url}&q={lat}%2c{lon}&aqi=no"
         response: requests.Response = requests.get(url)
         response.raise_for_status()

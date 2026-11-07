@@ -104,6 +104,61 @@ class ParkRecord(Base):
     lon: Mapped[float] = mapped_column(Float, nullable=False)
 
 
+class ConditionsRecord(Base):
+    """Map cached weather conditions to the ``conditions`` table.
+
+    Attributes
+    ----------
+    park_id : Mapped[int]
+        Primary key and foreign key identifying the park.
+    last_updated : Mapped[datetime]
+        Weather provider's observation update time.
+    temp_f : Mapped[float]
+        Temperature in degrees Fahrenheit.
+    condition : Mapped[str]
+        Text description of current weather.
+    wind_mph : Mapped[float]
+        Wind speed in miles per hour.
+    wind_dir : Mapped[str]
+        Cardinal direction of the wind.
+    precip_in : Mapped[float]
+        Precipitation in inches.
+    humidity : Mapped[float]
+        Relative humidity percentage.
+    cloud : Mapped[float]
+        Cloud cover percentage.
+    feels_like_f : Mapped[float]
+        Feels-like temperature in degrees Fahrenheit.
+    heat_index_f : Mapped[float]
+        Heat index in degrees Fahrenheit.
+    uv : Mapped[float]
+        Ultraviolet index.
+    chance_of_rain : Mapped[float]
+        Chance of rain as a percentage.
+    chance_of_snow : Mapped[float]
+        Chance of snow as a percentage.
+    """
+
+    __tablename__: str = "conditions"
+
+    park_id: Mapped[int] = mapped_column(
+        ForeignKey("parks.park_id", ondelete="CASCADE"), primary_key=True
+    )
+    last_updated: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    temp_f: Mapped[float] = mapped_column(Float, nullable=False)
+    condition: Mapped[str] = mapped_column(String, nullable=False)
+    wind_mph: Mapped[float] = mapped_column(Float, nullable=False)
+    wind_dir: Mapped[str] = mapped_column(String, nullable=False)
+    precip_in: Mapped[float] = mapped_column(Float, nullable=False)
+    humidity: Mapped[float] = mapped_column(Float, nullable=False)
+    cloud: Mapped[float] = mapped_column(Float, nullable=False)
+    feels_like_f: Mapped[float] = mapped_column(Float, nullable=False)
+    heat_index_f: Mapped[float] = mapped_column(Float, nullable=False)
+    uv: Mapped[float] = mapped_column(Float, nullable=False)
+    chance_of_rain: Mapped[float] = mapped_column(Float, nullable=False)
+    chance_of_snow: Mapped[float] = mapped_column(Float, nullable=False)
+
+
 class TicketRecord(Base):
     """Map ticket model fields to the ``tickets`` table."""
 

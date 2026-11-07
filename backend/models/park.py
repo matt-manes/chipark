@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from .conditions import Conditions
+
 
 @dataclass
 class Park:
@@ -30,6 +32,8 @@ class Park:
         Longitude.
     park_id : int, default=-1
         Database identifier; negative values indicate an unpersisted park.
+    conditions : Conditions or None, default=None
+        Current weather conditions when requested.
     """
 
     park_no: str
@@ -43,3 +47,4 @@ class Park:
     lat: float
     lon: float
     park_id: int = -1
+    conditions: Conditions | None = None

@@ -1,17 +1,22 @@
 from collections.abc import Sequence
+from datetime import datetime, timedelta
 from typing import Self
 
 from starlette.requests import Request
 
+from ..clients.weatherapi_client import WeatherApiClient
+from ..models.conditions import Conditions
 from ..models.notification import MAX_NOTIFICATIONS_PER_REQUEST, Notification
 from ..models.park import Park
 from ..models.ticket import Ticket, TicketUpdate
 from ..repositories import (
+    ConditionsRepository,
     Database,
     NotificationRepository,
     ParkRepository,
     TicketRepository,
 )
+from ..tools.config import Config
 
 
 class DataService:
@@ -56,6 +61,9 @@ class DataService:
             self._database.session_factory
         )
         self._notification_repository: NotificationRepository = NotificationRepository(
+            self._database.session_factory
+        )
+        self._conditions_repository: ConditionsRepository = ConditionsRepository(
             self._database.session_factory
         )
 
@@ -118,6 +126,88 @@ class DataService:
             If no park has the requested identifier.
         """
         return self._park_repository.get(park_id)
+
+    def get_conditions(self, park_id: int) -> Conditions | None:
+        """Return current weather conditions, refreshing the cache when stale.
+
+        Parameters
+        ----------
+        park_id : int
+            Identifier of the park whose weather is requested.
+
+        Returns
+        -------
+        Conditions or None
+            Cached or freshly fetched conditions. Returns ``None`` if the
+            weather client has no conditions to provide.
+
+        Raises
+        ------
+        LookupError
+            If the park does not exist.
+        """
+        cached_conditions: Conditions | None = self._conditions_repository.get_for_park(
+            park_id
+        )
+        if self._conditions_cache_is_fresh(cached_conditions):
+            return cached_conditions
+
+        park: Park = self.get_park(park_id)
+        current_conditions: Conditions
+        try:
+            current_conditions = WeatherApiClient().get_current_conditions(
+                park.lat, park.lon
+            )
+        except Exception as e:
+            # TODO replace with logging
+            print(e)
+            return None
+        if cached_conditions is None:
+            return self._conditions_repository.add(park_id, current_conditions)
+        return self._conditions_repository.update(park_id, current_conditions)
+
+    def get_park_with_conditions(self, park_id: int) -> Park:
+        """Return a park with its current weather conditions populated.
+
+        Parameters
+        ----------
+        park_id : int
+            Identifier of the park to retrieve.
+
+        Returns
+        -------
+        Park
+            Park with cached or freshly fetched conditions.
+
+        Raises
+        ------
+        LookupError
+            If the park does not exist.
+        """
+        park: Park = self.get_park(park_id)
+        park.conditions = self.get_conditions(park_id)
+        return park
+
+    @staticmethod
+    def _conditions_cache_is_fresh(conditions: Conditions | None) -> bool:
+        """Determine whether cached conditions fall within the configured TTL.
+
+        Parameters
+        ----------
+        conditions : Conditions or None
+            Cached conditions, if present.
+
+        Returns
+        -------
+        bool
+            Whether the cache entry is fresh.
+        """
+        if conditions is None:
+            return False
+        expires_at: datetime = conditions.last_updated + timedelta(
+            seconds=Config().CHIPARK_CONDITIONS_TTL
+        )
+        return datetime.now() <= expires_at
 
     def park_exists(self, park_name: str) -> bool:
         """

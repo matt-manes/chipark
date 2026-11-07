@@ -1,4 +1,5 @@
 from .auth_repository import AuthRepository
+from .conditions_repository import ConditionsRepository
 from .database import Database
 from .database_factory import DatabaseFactory, DatabaseFactoryError
 from .notification_repository import NotificationRepository
@@ -9,6 +10,7 @@ from .ticket_repository import TicketRepository
 
 __all__: list[str] = [
     "AuthRepository",
+    "ConditionsRepository",
     "Database",
     "DatabaseFactory",
     "DatabaseFactoryError",

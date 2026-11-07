@@ -74,6 +74,7 @@ class Config:
     _instance: ClassVar[Self | None] = None
     _lock: ClassVar[Lock] = Lock()
     CHIPARK_DATABASE: str
+    CHIPARK_CONDITIONS_TTL: int
     CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL: str
     CHIPARK_PG_URL: str
 
