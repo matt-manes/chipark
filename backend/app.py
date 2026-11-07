@@ -7,6 +7,7 @@ from starlette.applications import Starlette
 
 from backend.repositories import Database, DatabaseFactory
 from backend.routers.auth import router as auth_router
+from backend.routers.notifications import router as notifications_router
 from backend.routers.parks import router as parks_router
 from backend.routers.tickets import router as tickets_router
 from backend.services.auth_service import AuthService
@@ -57,6 +58,7 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
 app: FastAPI = FastAPI(lifespan=lifespan)
 mcp_mount: McpAsgiApp = McpAsgiApp()
 app.include_router(auth_router)
+app.include_router(notifications_router)
 app.include_router(parks_router)
 app.include_router(tickets_router)
 

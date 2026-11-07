@@ -69,3 +69,12 @@ with `PATCH /tickets/{ticket_id}`, close tickets with
 `PATCH /tickets/{ticket_id}/close`, or delete tickets with
 `DELETE /tickets/{ticket_id}`. Existing tickets are retained with no owner when
 the ownership column is added; new tickets are associated with their submitter.
+
+Ticket updates, closures, and deletions create a persisted notification for the
+ticket submitter as part of the same database transaction. Authenticated users
+can list their notifications at `GET /notifications`, mark one read with
+`PATCH /notifications/{notification_id}/read`, and receive new notifications
+over `GET /notifications/stream`. The SSE endpoint requires the bearer token in
+the `Authorization` header and polls the database once per second. It supports
+`Last-Event-ID` for reconnect replay; clients should use a fetch-based SSE
+implementation because browser `EventSource` cannot send the bearer header.

@@ -11,6 +11,7 @@ def test_creates_schema(sqlite_database: SqliteDatabase) -> None:
     table_names: list[str] = inspect(sqlite_database.engine).get_table_names()
     assert table_names == [
         "access_tokens",
+        "notifications",
         "oauth_states",
         "parks",
         "tickets",

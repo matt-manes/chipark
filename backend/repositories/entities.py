@@ -122,3 +122,22 @@ class TicketRecord(Base):
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True, index=True
     )
+
+
+class NotificationRecord(Base):
+    """Map user ticket notifications to the ``notifications`` table."""
+
+    __tablename__: str = "notifications"
+
+    notification_id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    ticket_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    park_name: Mapped[str] = mapped_column(String, nullable=False)
+    issue: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

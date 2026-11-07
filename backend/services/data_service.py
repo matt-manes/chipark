@@ -3,9 +3,15 @@ from typing import Self
 
 from starlette.requests import Request
 
+from ..models.notification import MAX_NOTIFICATIONS_PER_REQUEST, Notification
 from ..models.park import Park
 from ..models.ticket import Ticket, TicketUpdate
-from ..repositories import Database, ParkRepository, TicketRepository
+from ..repositories import (
+    Database,
+    NotificationRepository,
+    ParkRepository,
+    TicketRepository,
+)
 
 
 class DataService:
@@ -47,6 +53,9 @@ class DataService:
             self._database.session_factory
         )
         self._ticket_repository: TicketRepository = TicketRepository(
+            self._database.session_factory
+        )
+        self._notification_repository: NotificationRepository = NotificationRepository(
             self._database.session_factory
         )
 
@@ -233,6 +242,88 @@ class DataService:
             If no ticket has the requested identifier.
         """
         self._ticket_repository.delete(ticket_id)
+
+    def get_notifications(
+        self, user_id: int, limit: int = MAX_NOTIFICATIONS_PER_REQUEST
+    ) -> list[Notification]:
+        """Return the newest notifications for one user.
+
+        Parameters
+        ----------
+        user_id : int
+            Identifier of the recipient.
+        limit : int, default=100
+            Maximum number of notifications to return.
+
+        Returns
+        -------
+        list[Notification]
+            Recipient's notifications ordered newest first.
+        """
+        return self._notification_repository.get_for_user(user_id, limit)
+
+    def get_notifications_after(
+        self,
+        user_id: int,
+        notification_id: int,
+        limit: int = MAX_NOTIFICATIONS_PER_REQUEST,
+    ) -> list[Notification]:
+        """Return notifications newer than a user's SSE event cursor.
+
+        Parameters
+        ----------
+        user_id : int
+            Identifier of the recipient.
+        notification_id : int
+            Last event ID acknowledged by the client.
+        limit : int, default=100
+            Maximum number of notifications to return.
+
+        Returns
+        -------
+        list[Notification]
+            Notifications ordered oldest first.
+        """
+        return self._notification_repository.get_after(user_id, notification_id, limit)
+
+    def get_latest_notification_id(self, user_id: int) -> int:
+        """Return the most recent notification ID belonging to one user.
+
+        Parameters
+        ----------
+        user_id : int
+            Identifier of the recipient.
+
+        Returns
+        -------
+        int
+            Newest notification ID, or zero when none exists.
+        """
+        return self._notification_repository.get_latest_id_for_user(user_id)
+
+    def mark_notification_read(
+        self, user_id: int, notification_id: int
+    ) -> Notification:
+        """Mark one of a user's notifications as read.
+
+        Parameters
+        ----------
+        user_id : int
+            Identifier of the recipient.
+        notification_id : int
+            Identifier of the notification to mark as read.
+
+        Returns
+        -------
+        Notification
+            Updated notification.
+
+        Raises
+        ------
+        LookupError
+            If the notification does not belong to the user or does not exist.
+        """
+        return self._notification_repository.mark_read(user_id, notification_id)
 
     def close(self) -> None:
         """Dispose of the database engine owned by this service."""

@@ -1,11 +1,13 @@
 from collections.abc import Sequence
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
+from ..models.notification import NotificationEventType
 from ..models.ticket import Ticket, TicketStatus, TicketUpdate
 from ..tools.accent_normalizer import AccentNormalizer
-from .entities import TicketRecord
+from .entities import NotificationRecord, TicketRecord, UserRecord
 
 
 class TicketRepository:
@@ -113,7 +115,12 @@ class TicketRepository:
             record: TicketRecord | None = session.get(TicketRecord, ticket_id)
             if record is None:
                 raise LookupError(f"Ticket {ticket_id} was not found")
+            was_open: bool = record.status is not TicketStatus.CLOSED
             record.status = TicketStatus.CLOSED
+            if was_open:
+                self._add_notification(
+                    session, record, NotificationEventType.TICKET_CLOSED
+                )
             session.flush()
             return self._to_model(record)
 
@@ -143,6 +150,7 @@ class TicketRepository:
             record: TicketRecord | None = session.get(TicketRecord, ticket_id)
             if record is None:
                 raise LookupError(f"Ticket {ticket_id} was not found")
+            has_changes: bool = False
             for field_name, value in changes.model_dump(exclude_unset=True).items():
                 if field_name == "issue":
                     if value is None:
@@ -152,7 +160,13 @@ class TicketRepository:
                     if not value.strip():
                         raise ValueError("A ticket issue cannot be empty.")
                     value = AccentNormalizer.remove_accents(value)
+                if getattr(record, field_name) != value:
+                    has_changes = True
                 setattr(record, field_name, value)
+            if has_changes:
+                self._add_notification(
+                    session, record, NotificationEventType.TICKET_UPDATED
+                )
             session.flush()
             return self._to_model(record)
 
@@ -173,7 +187,46 @@ class TicketRepository:
             record: TicketRecord | None = session.get(TicketRecord, ticket_id)
             if record is None:
                 raise LookupError(f"Ticket {ticket_id} was not found")
+            self._add_notification(
+                session, record, NotificationEventType.TICKET_DELETED
+            )
             session.delete(record)
+
+    @staticmethod
+    def _add_notification(
+        session: Session,
+        record: TicketRecord,
+        event_type: NotificationEventType,
+    ) -> None:
+        """Create a recipient notification within the ticket transaction.
+
+        Parameters
+        ----------
+        session : Session
+            Active transaction containing the ticket change.
+        record : TicketRecord
+            Ticket state to preserve in the notification.
+        event_type : NotificationEventType
+            Event that caused the notification.
+        """
+        if record.user_id is None:
+            return
+        # Keep notification IDs ordered by commit for a user's SSE cursor.
+        session.scalar(
+            select(UserRecord.user_id)
+            .where(UserRecord.user_id == record.user_id)
+            .with_for_update()
+        )
+        session.add(
+            NotificationRecord(
+                user_id=record.user_id,
+                event_type=event_type.value,
+                ticket_id=record.ticket_id,
+                park_name=record.park_name,
+                issue=record.issue,
+                created_at=datetime.now(),
+            )
+        )
 
     @staticmethod
     def _to_model(record: TicketRecord) -> Ticket:

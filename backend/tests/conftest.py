@@ -10,7 +10,10 @@ from sqlalchemy.engine import URL, make_url
 
 from backend.models.park import Park
 from backend.models.ticket import Ticket, TicketStatus
+from backend.models.user import User
+from backend.repositories.auth_repository import AuthRepository
 from backend.repositories.database import Database
+from backend.repositories.notification_repository import NotificationRepository
 from backend.repositories.park_repository import ParkRepository
 from backend.repositories.postgresql_database import PostgresqlDatabase
 from backend.repositories.sqlite_database import SqliteDatabase
@@ -136,6 +139,18 @@ def park_repository(database: Database) -> ParkRepository:
 @pytest.fixture
 def ticket_repository(database: Database) -> TicketRepository:
     return TicketRepository(database.session_factory)
+
+
+@pytest.fixture
+def notification_repository(database: Database) -> NotificationRepository:
+    return NotificationRepository(database.session_factory)
+
+
+@pytest.fixture
+def sample_user(database: Database) -> User:
+    return AuthRepository(database.session_factory).create_user(
+        "notification-user@example.com", None
+    )
 
 
 @pytest.fixture
