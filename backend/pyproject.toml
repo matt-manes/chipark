@@ -24,3 +24,6 @@ quality-checks = "scripts.run_quality_checks:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["scripts"]
+
+[tool.ruff.lint]
+ignore = ["I001"]
