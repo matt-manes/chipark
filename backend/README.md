@@ -45,14 +45,22 @@ revokes the token; `GET /auth/me` returns the current account.
 Google sign-in is available through `GET /auth/google`. The configuration keys
 in `config.toml` are the same names used for environment variables:
 `CHIPARK_DATABASE`, `CHIPARK_CONDITIONS_TTL`,
-`CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL`, and `CHIPARK_PG_URL`. The conditions
-cache TTL is measured in seconds and defaults to 900 seconds (15 minutes).
+`CHIPARK_CORS_ALLOW_LIST`, `CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL`, and
+`CHIPARK_PG_URL`. `CHIPARK_CORS_ALLOW_LIST` accepts comma-separated frontend
+origins and defaults to `http://localhost:5173`. The conditions cache TTL is
+measured in seconds and defaults to 900 seconds (15 minutes).
 Configure `CHIPARK_GOOGLE_CLIENT_ID`, `CHIPARK_GOOGLE_CLIENT_SECRET`, and
 `CHIPARK_GOOGLE_REDIRECT_URI`; register the backend callback URL
 `/auth/google/callback` with Google. The callback redirects to
 `CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL` with the bearer token in the URL
-fragment. The configured value currently uses the temporary
-`http://localhost:3000/auth/callback` placeholder.
+fragment. The configured frontend callback is
+`http://localhost:5173/auth/callback`.
+
+Authenticated users can update password-based account details with
+`PATCH /auth/me`; Google-linked accounts manage their credentials through
+Google. `GET /tickets/mine` returns the current user's submitted tickets.
+Administrators can reopen tickets with `PATCH /tickets/{ticket_id}/reopen`,
+and `GET /tickets/parks/{park_id}/open` returns a park's open tickets.
 
 To use PostgreSQL, set `CHIPARK_DATABASE` to `postgresql`, configure
 `CHIPARK_PG_URL` with the SQLAlchemy URL excluding credentials, and provide

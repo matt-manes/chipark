@@ -257,6 +257,42 @@ class DataService:
         """
         return self._ticket_repository.get_all()
 
+    def get_tickets_for_user(self, user_id: int) -> list[Ticket]:
+        """Retrieve tickets submitted by one user.
+
+        Parameters
+        ----------
+        user_id : int
+            Submitter account identifier.
+
+        Returns
+        -------
+        list[Ticket]
+            Tickets submitted by the requested account.
+        """
+        return self._ticket_repository.get_for_user(user_id)
+
+    def get_open_tickets_for_park(self, park_id: int) -> list[Ticket]:
+        """Retrieve open tickets associated with a park identifier.
+
+        Parameters
+        ----------
+        park_id : int
+            Database identifier of the park.
+
+        Returns
+        -------
+        list[Ticket]
+            Open tickets associated with the requested park.
+
+        Raises
+        ------
+        LookupError
+            If the park does not exist.
+        """
+        park: Park = self.get_park(park_id)
+        return self._ticket_repository.get_open_for_park(park.name)
+
     def add_ticket(self, ticket: Ticket) -> Ticket:
         """
         Add a ticket to the database.
@@ -293,6 +329,26 @@ class DataService:
             If no ticket has the requested identifier.
         """
         return self._ticket_repository.close(ticket_id)
+
+    def reopen_ticket(self, ticket_id: int) -> Ticket:
+        """Reopen an existing ticket.
+
+        Parameters
+        ----------
+        ticket_id : int
+            Identifier of the ticket to reopen.
+
+        Returns
+        -------
+        Ticket
+            Updated ticket with open status.
+
+        Raises
+        ------
+        LookupError
+            If no ticket has the requested identifier.
+        """
+        return self._ticket_repository.reopen(ticket_id)
 
     def update_ticket(self, ticket_id: int, changes: TicketUpdate) -> Ticket:
         """Update editable fields on an existing ticket.

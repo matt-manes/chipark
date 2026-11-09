@@ -5,6 +5,7 @@ from httpx2 import Response
 
 from backend.models.park import Park
 from backend.models.ticket import Ticket, TicketStatus
+from backend.services.data_service import DataService
 
 
 def test_get_tickets_returns_all_tickets(
@@ -14,6 +15,72 @@ def test_get_tickets_returns_all_tickets(
 
     assert response.status_code == 200
     assert response.json()[0]["ticket_id"] == saved_ticket.ticket_id
+
+
+def test_get_open_tickets_for_park_returns_only_open_tickets(
+    api_client: TestClient,
+    data_service: DataService,
+    saved_ticket: Ticket,
+    sample_park2: Park,
+) -> None:
+    data_service.add_park(sample_park2)
+    closed_response: Response = api_client.post(
+        "/tickets",
+        json={"park_name": sample_park2.name, "issue": "Broken light"},
+    )
+    api_client.patch(f"/tickets/{closed_response.json()['ticket_id']}/close")
+    api_client.post(
+        "/tickets",
+        json={"park_name": sample_park2.name, "issue": "Damaged sign"},
+    )
+
+    response: Response = api_client.get("/tickets/parks/1/open")
+
+    assert response.status_code == 200
+    assert [ticket["issue"] for ticket in response.json()] == [saved_ticket.issue]
+
+
+def test_get_open_tickets_for_park_returns_404_for_missing_park(
+    api_client: TestClient,
+) -> None:
+    response: Response = api_client.get("/tickets/parks/999/open")
+
+    assert response.status_code == 404
+
+
+def test_get_my_tickets_returns_only_current_users_tickets(
+    api_client: TestClient, sample_park: Park
+) -> None:
+    own_ticket: Response = api_client.post(
+        "/tickets",
+        json={"park_name": sample_park.name, "issue": "My damaged bench"},
+    )
+    registration: Response = api_client.post(
+        "/auth/register",
+        json={
+            "email": "other-member@example.com",
+            "password": "a-secure-user-password",
+        },
+    )
+    other_token: str = registration.json()["access_token"]
+    api_client.post(
+        "/tickets",
+        headers={"Authorization": f"Bearer {other_token}"},
+        json={"park_name": sample_park.name, "issue": "Other damaged bench"},
+    )
+
+    response: Response = api_client.get("/tickets/mine")
+
+    assert response.status_code == 200
+    assert [ticket["ticket_id"] for ticket in response.json()] == [
+        own_ticket.json()["ticket_id"]
+    ]
+
+
+def test_get_my_tickets_requires_authentication(api_client: TestClient) -> None:
+    response: Response = api_client.get("/tickets/mine", headers={"Authorization": ""})
+
+    assert response.status_code == 401
 
 
 def test_get_ticket_returns_ticket_by_id(
@@ -113,6 +180,62 @@ def test_close_ticket_returns_404_for_missing_ticket(api_client: TestClient) -> 
     response: Response = api_client.patch("/tickets/999/close")
 
     assert response.status_code == 404
+
+
+def test_reopen_ticket_updates_status_and_notifies_submitter(
+    api_client: TestClient, sample_park: Park
+) -> None:
+    ticket_response: Response = api_client.post(
+        "/tickets",
+        json={"park_name": sample_park.name, "issue": "Broken bench"},
+    )
+    ticket_id: int = ticket_response.json()["ticket_id"]
+    api_client.patch(f"/tickets/{ticket_id}/close")
+
+    response: Response = api_client.patch(f"/tickets/{ticket_id}/reopen")
+    notification_response: Response = api_client.get("/notifications")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == TicketStatus.OPEN.value
+    assert notification_response.json()[0]["event_type"] == "ticket_reopened"
+
+
+def test_reopen_ticket_returns_404_for_missing_ticket(api_client: TestClient) -> None:
+    response: Response = api_client.patch("/tickets/999/reopen")
+
+    assert response.status_code == 404
+
+
+def test_regular_user_cannot_reopen_ticket(
+    api_client: TestClient, saved_ticket: Ticket
+) -> None:
+    registration: Response = api_client.post(
+        "/auth/register",
+        json={
+            "email": "reopener@example.com",
+            "password": "a-secure-user-password",
+        },
+    )
+    user_token: str = registration.json()["access_token"]
+
+    response: Response = api_client.patch(
+        f"/tickets/{saved_ticket.ticket_id}/reopen",
+        headers={"Authorization": f"Bearer {user_token}"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_admin_can_update_ticket_status(
+    api_client: TestClient, saved_ticket: Ticket
+) -> None:
+    response: Response = api_client.patch(
+        f"/tickets/{saved_ticket.ticket_id}",
+        json={"status": TicketStatus.CLOSED.value},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == TicketStatus.CLOSED.value
 
 
 def test_regular_user_cannot_close_ticket(

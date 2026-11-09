@@ -249,6 +249,73 @@ class AuthService:
         """
         self._repository.revoke_access_token(self._hash_token(token), self._utc_now())
 
+    def update_profile(
+        self,
+        user_id: int,
+        email: str | None,
+        current_password: str | None,
+        new_password: str | None,
+    ) -> User:
+        """Update the email and/or password for a password-based account.
+
+        Parameters
+        ----------
+        user_id : int
+            Authenticated account identifier.
+        email : str or None
+            New email address, if requested.
+        current_password : str or None
+            Existing password required when changing the password.
+        new_password : str or None
+            Replacement password, if requested.
+
+        Returns
+        -------
+        User
+            Updated public account details.
+
+        Raises
+        ------
+        AuthenticationError
+            If the account uses Google OAuth, the current password is invalid,
+            or the request contains no changes.
+        IntegrityError
+            If the new email is already in use.
+        """
+        if email is None and new_password is None:
+            raise AuthenticationError("At least one profile field must be provided.")
+
+        credentials: UserCredentials | None = (
+            self._repository.get_credentials_by_user_id(user_id)
+        )
+        if credentials is None:
+            raise AuthenticationError("The account was not found.")
+        if credentials.google_subject is not None or credentials.password_hash is None:
+            raise AuthenticationError(
+                "Google-linked accounts cannot update credentials here."
+            )
+
+        password_hash: str | None = None
+        if new_password is not None:
+            self._validate_password(new_password)
+            if current_password is None or not self._password_hasher.verify(
+                current_password, credentials.password_hash
+            ):
+                raise AuthenticationError("The current password is incorrect.")
+            password_hash = self._password_hasher.hash(new_password)
+
+        normalized_email: str | None = (
+            None if email is None else self._normalize_email(email)
+        )
+        try:
+            return self._repository.update_profile(
+                user_id, normalized_email, password_hash
+            )
+        except IntegrityError as error:
+            raise AuthenticationError(
+                "An account with this email already exists."
+            ) from error
+
     def bootstrap_admin(self, email: str | None, password: str | None) -> User | None:
         """Create or promote the configured administrator account.
 

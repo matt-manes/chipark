@@ -33,11 +33,17 @@ class User:
         Account email address.
     role : UserRole
         Authorization role assigned to the account.
+    password_login_enabled : bool, default=False
+        Whether the account has a password credential.
+    google_login_enabled : bool, default=False
+        Whether the account is linked to Google OAuth.
     """
 
     user_id: int
     email: str
     role: UserRole
+    password_login_enabled: bool = False
+    google_login_enabled: bool = False
 
 
 @dataclass
@@ -119,11 +125,35 @@ class UserResponse(BaseModel):
         Account email address.
     role : UserRole
         Authorization role assigned to the account.
+    password_login_enabled : bool
+        Whether the account has a password credential.
+    google_login_enabled : bool
+        Whether the account is linked to Google OAuth.
     """
 
     user_id: int
     email: EmailStr
     role: UserRole
+    password_login_enabled: bool = False
+    google_login_enabled: bool = False
+
+
+class ProfileUpdateRequest(BaseModel):
+    """Validate account profile updates.
+
+    Attributes
+    ----------
+    email : EmailStr or None, default=None
+        New email address, when supplied.
+    current_password : str or None, default=None
+        Current password required to change password credentials.
+    new_password : str or None, default=None
+        Replacement password, when supplied.
+    """
+
+    email: EmailStr | None = None
+    current_password: str | None = None
+    new_password: str | None = Field(default=None, min_length=6, max_length=128)
 
 
 class AuthenticatedUserResponse(BaseModel):
@@ -165,5 +195,11 @@ class AuthenticatedUserResponse(BaseModel):
             access_token=authenticated_user.access_token,
             token_type="Bearer",
             expires_at=authenticated_user.expires_at,
-            user=UserResponse(user_id=user.user_id, email=user.email, role=user.role),
+            user=UserResponse(
+                user_id=user.user_id,
+                email=user.email,
+                role=user.role,
+                password_login_enabled=user.password_login_enabled,
+                google_login_enabled=user.google_login_enabled,
+            ),
         )

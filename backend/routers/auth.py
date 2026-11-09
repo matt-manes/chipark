@@ -8,6 +8,7 @@ from ..models.user import (
     AuthenticatedUser,
     AuthenticatedUserResponse,
     LoginRequest,
+    ProfileUpdateRequest,
     RegistrationRequest,
     User,
     UserResponse,
@@ -137,6 +138,53 @@ def get_current_user(
         user_id=user.user_id,
         email=user.email,
         role=user.role,
+        password_login_enabled=user.password_login_enabled,
+        google_login_enabled=user.google_login_enabled,
+    )
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_current_user(
+    changes: ProfileUpdateRequest,
+    request: Request,
+    user: Annotated[User, Depends(AuthDependencies.require_user)],
+) -> UserResponse:
+    """Update the authenticated account's email and/or password.
+
+    Parameters
+    ----------
+    changes : ProfileUpdateRequest
+        Requested profile fields.
+    request : Request
+        Incoming request containing the authentication service.
+    user : User
+        Authenticated account.
+
+    Returns
+    -------
+    UserResponse
+        Updated public account details.
+
+    Raises
+    ------
+    HTTPException
+        If the account type or supplied credentials do not allow the update.
+    """
+    try:
+        updated_user: User = request.app.state.auth_service.update_profile(
+            user.user_id,
+            changes.email,
+            changes.current_password,
+            changes.new_password,
+        )
+    except AuthenticationError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return UserResponse(
+        user_id=updated_user.user_id,
+        email=updated_user.email,
+        role=updated_user.role,
+        password_login_enabled=updated_user.password_login_enabled,
+        google_login_enabled=updated_user.google_login_enabled,
     )
 
 

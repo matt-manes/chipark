@@ -75,8 +75,24 @@ class Config:
     _lock: ClassVar[Lock] = Lock()
     CHIPARK_DATABASE: str
     CHIPARK_CONDITIONS_TTL: int
+    CHIPARK_CORS_ALLOW_LIST: str
     CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL: str
     CHIPARK_PG_URL: str
+
+    @property
+    def cors_allow_origins(self) -> tuple[str, ...]:
+        """Parse the comma-separated CORS origin allow-list.
+
+        Returns
+        -------
+        tuple[str, ...]
+            Non-empty, whitespace-trimmed origins.
+        """
+        return tuple(
+            origin.strip()
+            for origin in self.CHIPARK_CORS_ALLOW_LIST.split(",")
+            if origin.strip()
+        )
 
     def __new__(cls) -> Self:
         """

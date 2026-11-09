@@ -9,8 +9,9 @@ from backend.tools.config import Config, ConfigError, EnvValueParser
 DEFAULT_CONFIG_SETTINGS: str = (
     'CHIPARK_DATABASE = "sqlite"\n'
     "CHIPARK_CONDITIONS_TTL = 900\n"
+    'CHIPARK_CORS_ALLOW_LIST = "http://localhost:5173"\n'
     "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL = "
-    '"http://localhost:3000/auth/callback"\n'
+    '"http://localhost:5173/auth/callback"\n'
     'CHIPARK_PG_URL = "postgresql+psycopg2://localhost:5432/chipark"\n'
 )
 
@@ -41,6 +42,7 @@ def reset_config_singleton(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(Config, "_instance", None)
     monkeypatch.delenv("CHIPARK_DATABASE", raising=False)
     monkeypatch.delenv("CHIPARK_CONDITIONS_TTL", raising=False)
+    monkeypatch.delenv("CHIPARK_CORS_ALLOW_LIST", raising=False)
     monkeypatch.delenv("CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL", raising=False)
     monkeypatch.delenv("CHIPARK_PG_URL", raising=False)
 
@@ -56,9 +58,10 @@ def test_loads_database_from_toml(
 
     assert config.CHIPARK_DATABASE == "sqlite"
     assert config.CHIPARK_CONDITIONS_TTL == 900
+    assert config.CHIPARK_CORS_ALLOW_LIST == "http://localhost:5173"
     assert (
         config.CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL
-        == "http://localhost:3000/auth/callback"
+        == "http://localhost:5173/auth/callback"
     )
     assert config.CHIPARK_PG_URL == ("postgresql+psycopg2://localhost:5432/chipark")
 
@@ -72,6 +75,10 @@ def test_environment_value_overrides_toml(
     monkeypatch.setenv("CHIPARK_DATABASE", "postgresql")
     monkeypatch.setenv("CHIPARK_CONDITIONS_TTL", "300")
     monkeypatch.setenv(
+        "CHIPARK_CORS_ALLOW_LIST",
+        "http://localhost:5173,https://chipark.example.com",
+    )
+    monkeypatch.setenv(
         "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL",
         "https://frontend.example.com/auth/callback",
     )
@@ -81,6 +88,13 @@ def test_environment_value_overrides_toml(
 
     assert config.CHIPARK_DATABASE == "postgresql"
     assert config.CHIPARK_CONDITIONS_TTL == 300
+    assert config.CHIPARK_CORS_ALLOW_LIST == (
+        "http://localhost:5173,https://chipark.example.com"
+    )
+    assert config.cors_allow_origins == (
+        "http://localhost:5173",
+        "https://chipark.example.com",
+    )
     assert (
         config.CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL
         == "https://frontend.example.com/auth/callback"

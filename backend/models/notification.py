@@ -10,6 +10,7 @@ class NotificationEventType(str, Enum):
 
     TICKET_UPDATED = "ticket_updated"
     TICKET_CLOSED = "ticket_closed"
+    TICKET_REOPENED = "ticket_reopened"
     TICKET_DELETED = "ticket_deleted"
 
 

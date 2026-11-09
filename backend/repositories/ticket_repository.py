@@ -92,6 +92,51 @@ class TicketRepository:
             ).all()
             return [self._to_model(record) for record in records]
 
+    def get_for_user(self, user_id: int) -> list[Ticket]:
+        """Retrieve tickets submitted by one user, ordered by identifier.
+
+        Parameters
+        ----------
+        user_id : int
+            Submitter account identifier.
+
+        Returns
+        -------
+        list[Ticket]
+            Tickets submitted by the requested account.
+        """
+        with self._session_factory() as session:
+            records: Sequence[TicketRecord] = session.scalars(
+                select(TicketRecord)
+                .where(TicketRecord.user_id == user_id)
+                .order_by(TicketRecord.ticket_id)
+            ).all()
+            return [self._to_model(record) for record in records]
+
+    def get_open_for_park(self, park_name: str) -> list[Ticket]:
+        """Retrieve open tickets for one park, ordered by identifier.
+
+        Parameters
+        ----------
+        park_name : str
+            Park name associated with the requested tickets.
+
+        Returns
+        -------
+        list[Ticket]
+            Open tickets for the requested park.
+        """
+        with self._session_factory() as session:
+            records: Sequence[TicketRecord] = session.scalars(
+                select(TicketRecord)
+                .where(
+                    TicketRecord.park_name == park_name,
+                    TicketRecord.status == TicketStatus.OPEN,
+                )
+                .order_by(TicketRecord.ticket_id)
+            ).all()
+            return [self._to_model(record) for record in records]
+
     def close(self, ticket_id: int) -> Ticket:
         """
         Mark a ticket as closed and return the updated model.
@@ -124,6 +169,37 @@ class TicketRepository:
             session.flush()
             return self._to_model(record)
 
+    def reopen(self, ticket_id: int) -> Ticket:
+        """Mark a ticket as open and notify its submitter when it changes.
+
+        Parameters
+        ----------
+        ticket_id : int
+            Identifier of the ticket to reopen.
+
+        Returns
+        -------
+        Ticket
+            Updated ticket with open status.
+
+        Raises
+        ------
+        LookupError
+            If no ticket has the requested identifier.
+        """
+        with self._session_factory.begin() as session:
+            record: TicketRecord | None = session.get(TicketRecord, ticket_id)
+            if record is None:
+                raise LookupError(f"Ticket {ticket_id} was not found")
+            was_closed: bool = record.status is not TicketStatus.OPEN
+            record.status = TicketStatus.OPEN
+            if was_closed:
+                self._add_notification(
+                    session, record, NotificationEventType.TICKET_REOPENED
+                )
+            session.flush()
+            return self._to_model(record)
+
     def update(self, ticket_id: int, changes: TicketUpdate) -> Ticket:
         """Update editable fields and return the persisted ticket.
 
@@ -151,6 +227,7 @@ class TicketRepository:
             if record is None:
                 raise LookupError(f"Ticket {ticket_id} was not found")
             has_changes: bool = False
+            previous_status: TicketStatus = record.status
             for field_name, value in changes.model_dump(exclude_unset=True).items():
                 if field_name == "issue":
                     if value is None:
@@ -160,12 +237,23 @@ class TicketRepository:
                     if not value.strip():
                         raise ValueError("A ticket issue cannot be empty.")
                     value = AccentNormalizer.remove_accents(value)
+                if field_name == "status" and value is None:
+                    raise ValueError("A ticket status cannot be null.")
                 if getattr(record, field_name) != value:
                     has_changes = True
                 setattr(record, field_name, value)
             if has_changes:
+                event_type: NotificationEventType = (
+                    NotificationEventType.TICKET_UPDATED
+                )
+                if previous_status is not record.status:
+                    event_type = (
+                        NotificationEventType.TICKET_CLOSED
+                        if record.status is TicketStatus.CLOSED
+                        else NotificationEventType.TICKET_REOPENED
+                    )
                 self._add_notification(
-                    session, record, NotificationEventType.TICKET_UPDATED
+                    session, record, event_type
                 )
             session.flush()
             return self._to_model(record)

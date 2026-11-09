@@ -84,6 +84,64 @@ class AuthRepository:
                 google_subject=record.google_subject,
             )
 
+    def get_credentials_by_user_id(self, user_id: int) -> UserCredentials | None:
+        """Retrieve an account and private credentials by database identifier.
+
+        Parameters
+        ----------
+        user_id : int
+            Account database identifier.
+
+        Returns
+        -------
+        UserCredentials or None
+            Account and credential data, or ``None`` if no account matches.
+        """
+        with self._session_factory() as session:
+            record: UserRecord | None = session.get(UserRecord, user_id)
+            if record is None:
+                return None
+            return UserCredentials(
+                user=self._to_user(record),
+                password_hash=record.password_hash,
+                google_subject=record.google_subject,
+            )
+
+    def update_profile(
+        self, user_id: int, email: str | None, password_hash: str | None
+    ) -> User:
+        """Update an account email and/or password hash.
+
+        Parameters
+        ----------
+        user_id : int
+            Account database identifier.
+        email : str or None
+            Replacement normalized email, or ``None`` to retain the current email.
+        password_hash : str or None
+            Replacement password hash, or ``None`` to retain the current hash.
+
+        Returns
+        -------
+        User
+            Updated public account details.
+
+        Raises
+        ------
+        LookupError
+            If the account does not exist.
+        """
+        with self._session_factory.begin() as session:
+            record: UserRecord | None = session.get(UserRecord, user_id)
+            if record is None:
+                raise LookupError(f"User {user_id} was not found")
+            if email is not None:
+                record.email = email
+            if password_hash is not None:
+                record.password_hash = password_hash
+            session.flush()
+            return self._to_user(record)
+
     def get_user_by_google_subject(self, google_subject: str) -> User | None:
         """Find the account linked to a Google identity.
 
@@ -329,4 +387,6 @@ class AuthRepository:
             user_id=record.user_id,
             email=record.email,
             role=record.role,
+            password_login_enabled=record.password_hash is not None,
+            google_login_enabled=record.google_subject is not None,
         )

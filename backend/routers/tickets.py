@@ -32,6 +32,58 @@ def get_tickets(
     return data_service.get_tickets()
 
 
+@router.get("/mine")
+def get_my_tickets(
+    data_service: Annotated[DataService, Depends(DataService.get_default_service)],
+    user: Annotated[User, Depends(AuthDependencies.require_user)],
+) -> list[Ticket]:
+    """Retrieve tickets submitted by the authenticated account.
+
+    Parameters
+    ----------
+    data_service : DataService
+        App-scoped service backed by the configured database.
+    user : User
+        Authenticated account.
+
+    Returns
+    -------
+    list[Ticket]
+        Tickets submitted by the current account.
+    """
+    return data_service.get_tickets_for_user(user.user_id)
+
+
+@router.get("/parks/{park_id}/open")
+def get_open_tickets_for_park(
+    park_id: int,
+    data_service: Annotated[DataService, Depends(DataService.get_default_service)],
+) -> list[Ticket]:
+    """Retrieve open tickets for a park.
+
+    Parameters
+    ----------
+    park_id : int
+        Identifier of the park.
+    data_service : DataService
+        App-scoped service backed by the configured database.
+
+    Returns
+    -------
+    list[Ticket]
+        Open tickets associated with the park.
+
+    Raises
+    ------
+    HTTPException
+        If the park does not exist.
+    """
+    try:
+        return data_service.get_open_tickets_for_park(park_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
 @router.get("/{ticket_id}")
 def get_ticket(
     ticket_id: int,
@@ -138,6 +190,39 @@ def close_ticket(
     """
     try:
         return data_service.close_ticket(ticket_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.patch("/{ticket_id}/reopen")
+def reopen_ticket(
+    ticket_id: int,
+    data_service: Annotated[DataService, Depends(DataService.get_default_service)],
+    user: Annotated[User, Depends(AuthDependencies.require_admin)],
+) -> Ticket:
+    """Reopen a ticket as an administrator.
+
+    Parameters
+    ----------
+    ticket_id : int
+        Identifier of the ticket to reopen.
+    data_service : DataService
+        App-scoped service backed by the configured database.
+    user : User
+        Administrator authenticated by the dependency.
+
+    Returns
+    -------
+    Ticket
+        Updated ticket with open status.
+
+    Raises
+    ------
+    HTTPException
+        If the ticket does not exist.
+    """
+    try:
+        return data_service.reopen_ticket(ticket_id)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
 

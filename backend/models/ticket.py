@@ -71,9 +71,12 @@ class TicketUpdate(BaseModel):
         Updated work estimate, or ``None`` to clear it.
     issue : str or None, optional
         Updated issue description.
+    status : TicketStatus or None, optional
+        Updated status.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     estimated_hours: float | None = None
     issue: str | None = None
+    status: TicketStatus | None = None

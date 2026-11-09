@@ -65,3 +65,66 @@ def test_logout_revokes_the_current_token(api_client: TestClient) -> None:
 
     assert logout_response.status_code == 204
     assert current_user_response.status_code == 401
+
+
+def test_profile_update_changes_email(api_client: TestClient) -> None:
+    response: Response = api_client.patch(
+        "/auth/me", json={"email": "updated-admin@example.com"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["email"] == "updated-admin@example.com"
+    assert response.json()["password_login_enabled"] is True
+    assert response.json()["google_login_enabled"] is False
+
+
+def test_profile_update_requires_current_password_for_password_change(
+    api_client: TestClient,
+) -> None:
+    response: Response = api_client.patch(
+        "/auth/me", json={"new_password": "another-secure-password"}
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "The current password is incorrect."
+
+
+def test_profile_update_changes_password(api_client: TestClient) -> None:
+    response: Response = api_client.patch(
+        "/auth/me",
+        json={
+            "current_password": "a-secure-admin-password",
+            "new_password": "another-secure-password",
+        },
+    )
+    login_response: Response = api_client.post(
+        "/auth/login",
+        json={
+            "email": "admin@example.com",
+            "password": "another-secure-password",
+        },
+    )
+
+    assert response.status_code == 200
+    assert login_response.status_code == 200
+
+
+def test_profile_update_rejects_empty_changes(api_client: TestClient) -> None:
+    response: Response = api_client.patch("/auth/me", json={})
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "At least one profile field must be provided."
+
+
+def test_cors_allows_configured_frontend_origin(api_client: TestClient) -> None:
+    response: Response = api_client.options(
+        "/auth/login",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "authorization,content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"

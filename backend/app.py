@@ -3,6 +3,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.applications import Starlette
 
 from backend.repositories import Database, DatabaseFactory
@@ -56,6 +57,13 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app: FastAPI = FastAPI(lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(Config().cors_allow_origins),
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 mcp_mount: McpAsgiApp = McpAsgiApp()
 app.include_router(auth_router)
 app.include_router(notifications_router)
