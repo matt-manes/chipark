@@ -87,6 +87,19 @@ def test_get_park_returns_404_for_missing_park(api_client: TestClient) -> None:
     assert response.status_code == 404
 
 
+def test_get_park_conditions_returns_conditions(api_client: TestClient) -> None:
+    response: Response = api_client.get("/parks/1/conditions")
+    assert response.status_code == 200
+    assert response.json()
+
+
+def test_get_park_conditions_returns_404_for_missing_park(
+    api_client: TestClient,
+) -> None:
+    response: Response = api_client.get("/parks/999/conditions")
+    assert response.status_code == 404
+
+
 def test_get_tickets_returns_all_tickets(
     api_client: TestClient, saved_ticket: Ticket
 ) -> None:

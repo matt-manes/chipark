@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from ..models.conditions import Conditions
 from ..models.park import Park
 from ..services.data_service import DataService
 
@@ -55,5 +56,37 @@ def get_park(
     """
     try:
         return data_service.get_park(park_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/{park_id}/conditions")
+def get_park_conditions(
+    park_id: int,
+    data_service: Annotated[DataService, Depends(DataService.get_default_service)],
+) -> Conditions | None:
+    """
+    Retrieve the current conditions for the given park.
+
+    Parameters
+    ----------
+    park_id : int
+        Identifier of the requested park.
+    data_service : DataService
+        App-scoped service backed by the configured database.
+
+    Returns
+    -------
+    Conditions | None
+        The current conditions if they are obtainable.
+        Returns `None` when they weather client is inaccessible.
+
+    Raises
+    ------
+    HTTPException
+        If the given park does not exist.
+    """
+    try:
+        return data_service.get_conditions(park_id)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
