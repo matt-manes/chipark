@@ -5,9 +5,12 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from fastapi.testclient import TestClient
+from httpx2 import Response
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, make_url
 
+from backend.app import app
 from backend.models.conditions import Conditions
 from backend.models.park import Park
 from backend.models.ticket import Ticket, TicketStatus
@@ -15,11 +18,13 @@ from backend.models.user import User
 from backend.repositories.auth_repository import AuthRepository
 from backend.repositories.conditions_repository import ConditionsRepository
 from backend.repositories.database import Database
+from backend.repositories.database_factory import DatabaseFactory
 from backend.repositories.notification_repository import NotificationRepository
 from backend.repositories.park_repository import ParkRepository
 from backend.repositories.postgresql_database import PostgresqlDatabase
 from backend.repositories.sqlite_database import SqliteDatabase
 from backend.repositories.ticket_repository import TicketRepository
+from backend.services.data_service import DataService
 
 
 @pytest.fixture
@@ -220,3 +225,51 @@ def sample_ticket() -> Ticket:
         estimated_hours=2.5,
         issue="Broken bench",
     )
+
+
+@pytest.fixture
+def data_service(database: Database, sample_park: Park) -> DataService:
+    service: DataService = DataService(database)
+    service.add_park(sample_park)
+    return service
+
+
+@pytest.fixture
+def saved_ticket(data_service: DataService, sample_ticket: Ticket) -> Ticket:
+    return data_service.add_ticket(sample_ticket)
+
+
+@pytest.fixture
+def api_client(
+    data_service: DataService,
+    database: Database,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[TestClient]:
+    monkeypatch.setattr(
+        DatabaseFactory,
+        "get_database",
+        staticmethod(lambda database_type: database),  # type: ignore
+    )
+    monkeypatch.setenv("CHIPARK_ADMIN_EMAIL", "admin@example.com")
+    monkeypatch.setenv("CHIPARK_ADMIN_PASSWORD", "a-secure-admin-password")
+
+    def provide_data_service() -> Iterator[DataService]:
+        yield data_service
+
+    app.dependency_overrides[DataService.get_default_service] = provide_data_service
+    try:
+        with TestClient(app) as client:
+            login_response: Response = client.post(
+                "/auth/login",
+                json={
+                    "email": "admin@example.com",
+                    "password": "a-secure-admin-password",
+                },
+            )
+            assert login_response.status_code == 200
+            client.headers["Authorization"] = (
+                f"Bearer {login_response.json()['access_token']}"
+            )
+            yield client
+    finally:
+        app.dependency_overrides.pop(DataService.get_default_service, None)
