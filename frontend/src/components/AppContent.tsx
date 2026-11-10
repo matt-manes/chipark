@@ -163,8 +163,10 @@ export default function AppContent({
   } else if (route.pathname === '/tickets') {
     page = (
       <TicketsPage
+        key={`${route.pathname}${route.search}`}
         api={api}
         user={user}
+        initialSearch={query.get('search') ?? ''}
         onSelectPark={id => onNavigate(`/parks/${id}`)}
         onEditTicket={id => onNavigate(`/tickets/${id}/edit`)}
       />

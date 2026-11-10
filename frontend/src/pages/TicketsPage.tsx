@@ -10,6 +10,7 @@ const PAGE_SIZE: number = 50
 interface TicketsPageProps {
   api: ChiparkApiClient
   user: User | null
+  initialSearch: string
   onSelectPark: (parkId: number) => void
   onEditTicket: (ticketId: number) => void
 }
@@ -17,6 +18,7 @@ interface TicketsPageProps {
 export default function TicketsPage({
   api,
   user,
+  initialSearch,
   onSelectPark,
   onEditTicket
 }: TicketsPageProps) {
@@ -28,7 +30,7 @@ export default function TicketsPage({
   const [updatingTicketId, setUpdatingTicketId] = useState<number | null>(null)
   const [page, setPage] = useState(1)
   const [filters, setFilters] = useState<TicketFilters>({
-    search: '',
+    search: initialSearch,
     status: 'all',
     sortBy: 'ticket_id',
     reverse: true

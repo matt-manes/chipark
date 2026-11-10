@@ -121,6 +121,26 @@ export class ChiparkApiClient {
     return response.data
   }
 
+  async getNotifications (
+    signal?: AbortSignal,
+    limit: number = 100
+  ): Promise<TicketNotification[]> {
+    const response = await this.client.get<TicketNotification[]>(
+      '/notifications',
+      { params: { limit }, signal }
+    )
+    return response.data
+  }
+
+  async markNotificationRead (
+    notificationId: number
+  ): Promise<TicketNotification> {
+    const response = await this.client.patch<TicketNotification>(
+      `/notifications/${notificationId}/read`
+    )
+    return response.data
+  }
+
   async submitTicket (ticket: TicketSubmission): Promise<Ticket> {
     const response = await this.client.post<Ticket>('/tickets', ticket)
     return response.data

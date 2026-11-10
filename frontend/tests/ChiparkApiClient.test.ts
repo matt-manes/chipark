@@ -263,3 +263,22 @@ test('notification stream reports a missing access token', async () => {
     /Sign in is required/
   )
 })
+
+test('notification history methods load the inbox and mark an item read', async () => {
+  await withApiServer(async (api, server) => {
+    api.setAccessToken('inbox-token')
+
+    await api.getNotifications(undefined, 25)
+    await api.markNotificationRead(42)
+
+    assert.deepEqual(
+      server.requests.map(request => [request.method, request.path]),
+      [
+        ['GET', '/notifications?limit=25'],
+        ['PATCH', '/notifications/42/read']
+      ]
+    )
+    assert.equal(server.requests[0].authorization, 'Bearer inbox-token')
+    assert.equal(server.requests[1].authorization, 'Bearer inbox-token')
+  })
+})

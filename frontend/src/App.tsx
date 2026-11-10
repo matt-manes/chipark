@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { ApiErrorFormatter, chiparkApi } from './api/ChiparkApiClient'
-import type { AuthenticatedUser, TicketNotification, User } from './api/types'
+import type {
+  AuthenticatedUser,
+  TicketNotification,
+  User
+} from './api/types'
 import AppContent from './components/AppContent'
 import Header from './components/Header'
 import { AuthTokenStore, BrowserRoute, type RouteState } from './navigation/BrowserRoute'
@@ -14,10 +18,15 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [authResolvedToken, setAuthResolvedToken] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [notificationCount, setNotificationCount] = useState(0)
-  const [notificationMessage, setNotificationMessage] = useState<string | null>(null)
+  const [notifications, setNotifications] = useState<TicketNotification[]>([])
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [notificationsError, setNotificationsError] = useState<string | null>(null)
   const latestEventId = useRef<number | null>(null)
   const parkLookupController = useRef<AbortController | null>(null)
+  const inboxRequestController = useRef<AbortController | null>(null)
+  const notificationCount: number = notifications.filter(
+    notification => notification.read_at === null
+  ).length
   const authLoading: boolean =
     accessToken !== null && authResolvedToken !== accessToken
 
@@ -80,9 +89,8 @@ export default function App() {
           latestEventId.current,
           (notification: TicketNotification) => {
             latestEventId.current = notification.notification_id
-            setNotificationCount(count => count + 1)
-            setNotificationMessage(
-              `Ticket #${notification.ticket_id} was ${notification.event_type.replaceAll('_', ' ')}.`
+            setNotifications(current =>
+              mergeNotifications(current, [notification])
             )
           }
         )
@@ -113,6 +121,57 @@ export default function App() {
     navigate(nextPath)
   }
 
+  async function openNotificationInbox(): Promise<void> {
+    inboxRequestController.current?.abort()
+    const controller: AbortController = new AbortController()
+    inboxRequestController.current = controller
+    setNotificationsLoading(true)
+    setNotificationsError(null)
+    try {
+      const history: TicketNotification[] = await chiparkApi.getNotifications(
+        controller.signal
+      )
+      if (controller.signal.aborted) return
+      setNotifications(current => mergeNotifications(current, history))
+    } catch (reason) {
+      if (!controller.signal.aborted) {
+        setNotificationsError(ApiErrorFormatter.getMessage(reason))
+      }
+    } finally {
+      if (!controller.signal.aborted) setNotificationsLoading(false)
+    }
+  }
+
+  function closeNotificationInbox(): void {
+    inboxRequestController.current?.abort()
+    inboxRequestController.current = null
+    setNotificationsLoading(false)
+
+    const unreadNotifications: TicketNotification[] = notifications.filter(
+      notification => notification.read_at === null
+    )
+    if (unreadNotifications.length === 0) return
+
+    const readAt: string = new Date().toISOString()
+    const unreadIds: Set<number> = new Set(
+      unreadNotifications.map(notification => notification.notification_id)
+    )
+    setNotifications(current =>
+      current.map(notification =>
+        unreadIds.has(notification.notification_id)
+          ? { ...notification, read_at: readAt }
+          : notification
+      )
+    )
+    void Promise.all(
+      unreadNotifications.map(notification =>
+        chiparkApi.markNotificationRead(notification.notification_id)
+      )
+    ).catch(reason => {
+      setNotificationsError(ApiErrorFormatter.getMessage(reason))
+    })
+  }
+
   async function logout(): Promise<void> {
     let logoutError: string | null = null
     try {
@@ -125,8 +184,10 @@ export default function App() {
       setAccessToken(null)
       setUser(null)
       setAuthResolvedToken(null)
-      setNotificationCount(0)
-      setNotificationMessage(null)
+      inboxRequestController.current?.abort()
+      inboxRequestController.current = null
+      setNotifications([])
+      setNotificationsError(null)
       navigate('/parks')
       if (logoutError !== null) setErrorMessage(logoutError)
     }
@@ -157,15 +218,17 @@ export default function App() {
       <Header
         user={user}
         notificationCount={notificationCount}
+        notifications={notifications}
+        notificationsLoading={notificationsLoading}
+        notificationsError={notificationsError}
         onNavigate={navigate}
         onLogout={() => void logout()}
+        onOpenInbox={() => void openNotificationInbox()}
+        onCloseInbox={closeNotificationInbox}
+        onSelectNotification={notification => {
+          navigate(`/tickets?search=${encodeURIComponent(String(notification.ticket_id))}`)
+        }}
       />
-      {notificationMessage !== null && (
-        <div className="notification-banner" role="status">
-          <span>{notificationMessage}</span>
-          <button type="button" aria-label="Dismiss notification" onClick={() => setNotificationMessage(null)}>Dismiss</button>
-        </div>
-      )}
       {errorMessage !== null && (
         <div className="global-error alert alert-error" role="alert">
           <span>{errorMessage}</span>
@@ -189,4 +252,27 @@ export default function App() {
       </footer>
     </div>
   )
+}
+
+function mergeNotifications(
+  current: TicketNotification[],
+  incoming: TicketNotification[]
+): TicketNotification[] {
+  const notificationsById: Map<number, TicketNotification> = new Map(
+    current.map(notification => [notification.notification_id, notification])
+  )
+  for (const notification of incoming) {
+    const existing: TicketNotification | undefined = notificationsById.get(
+      notification.notification_id
+    )
+    notificationsById.set(
+      notification.notification_id,
+      existing !== undefined && existing.read_at !== null
+        ? { ...notification, read_at: existing.read_at }
+        : notification
+    )
+  }
+  return [...notificationsById.values()]
+    .sort((left, right) => right.notification_id - left.notification_id)
+    .slice(0, 100)
 }
