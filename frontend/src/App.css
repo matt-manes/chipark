@@ -319,11 +319,54 @@ main {
 
 label {
   display: flex;
+  position: relative;
   flex-direction: column;
   gap: 0.42rem;
   color: #c5d3c9;
   font-size: 0.82rem;
   font-weight: 650;
+}
+
+.park-picker-options {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 0.2rem);
+  right: 0;
+  left: 0;
+  max-height: 16rem;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-raised);
+  box-shadow: 0 12px 30px #0008;
+}
+
+.park-picker-options button {
+  display: block;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.65rem 0.8rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.park-picker-options button + button {
+  border-top: 1px solid var(--border);
+}
+
+.park-picker-options button:hover:not(:disabled),
+.park-picker-options button[aria-selected="true"] {
+  background: var(--accent-soft);
+  transform: none;
+}
+
+.park-picker-empty {
+  display: block;
+  padding: 0.8rem;
+  color: var(--muted);
+  font-weight: 400;
 }
 
 .check-field {

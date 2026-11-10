@@ -17,19 +17,29 @@ export default function SubmitTicketPage({
 }: SubmitTicketPageProps) {
   const [parks, setParks] = useState<Park[]>([])
   const [parkName, setParkName] = useState('')
+  const [isParkListOpen, setIsParkListOpen] = useState(false)
   const [issue, setIssue] = useState('')
   const [estimatedHours, setEstimatedHours] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const matchingParks: Park[] = parks.filter(park =>
+    park.name.toLocaleLowerCase().includes(parkName.trim().toLocaleLowerCase())
+  )
 
   useEffect(() => {
     const controller: AbortController = new AbortController()
     void api.getParks(controller.signal)
       .then(result => {
         if (controller.signal.aborted) return
-        setParks(result)
+        const sortedParks: Park[] = [...result].sort((left, right) =>
+          left.name.localeCompare(right.name, undefined, {
+            numeric: true,
+            sensitivity: 'base'
+          })
+        )
+        setParks(sortedParks)
         const selectedPark: Park | undefined = result.find(
           park => park.park_id === initialParkId
         )
@@ -48,6 +58,10 @@ export default function SubmitTicketPage({
     event.preventDefault()
     setError(null)
     setNotice(null)
+    if (!parks.some(park => park.name === parkName)) {
+      setError('Choose a park from the list.')
+      return
+    }
     setSubmitting(true)
     try {
       await api.submitTicket({
@@ -82,10 +96,56 @@ export default function SubmitTicketPage({
         {notice !== null && <div className="alert alert-success" role="status">{notice}</div>}
         <label>
           Park
-          <select required value={parkName} onChange={event => setParkName(event.target.value)}>
-            <option value="">{loading ? 'Loading parks...' : 'Choose a park'}</option>
-            {parks.map(park => <option key={park.park_id} value={park.name}>{park.name}</option>)}
-          </select>
+          <input
+            type="text"
+            required
+            autoComplete="off"
+            value={parkName}
+            placeholder={loading ? 'Loading parks...' : 'Type to search parks'}
+            disabled={loading}
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={isParkListOpen}
+            aria-controls="park-name-options"
+            onFocus={() => setIsParkListOpen(true)}
+            onClick={() => setIsParkListOpen(true)}
+            onChange={event => {
+              setParkName(event.target.value)
+              setIsParkListOpen(true)
+            }}
+            onKeyDown={event => {
+              if (event.key === 'Escape') setIsParkListOpen(false)
+              if (event.key === 'Enter' && matchingParks.length > 0) {
+                event.preventDefault()
+                setParkName(matchingParks[0].name)
+                setIsParkListOpen(false)
+              }
+            }}
+            onBlur={() => {
+              window.setTimeout(() => setIsParkListOpen(false), 100)
+            }}
+          />
+          {isParkListOpen && !loading && (
+            <div className="park-picker-options" id="park-name-options" role="listbox">
+              {matchingParks.length > 0 ? matchingParks.map(park => (
+                <button
+                  type="button"
+                  key={park.park_id}
+                  role="option"
+                  aria-selected={park.name === parkName}
+                  onMouseDown={event => event.preventDefault()}
+                  onClick={() => {
+                    setParkName(park.name)
+                    setIsParkListOpen(false)
+                  }}
+                >
+                  {park.name}
+                </button>
+              )) : (
+                <span className="park-picker-empty">No parks match your search.</span>
+              )}
+            </div>
+          )}
         </label>
         <label>
           What needs attention?
