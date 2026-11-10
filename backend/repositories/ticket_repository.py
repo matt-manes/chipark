@@ -243,18 +243,14 @@ class TicketRepository:
                     has_changes = True
                 setattr(record, field_name, value)
             if has_changes:
-                event_type: NotificationEventType = (
-                    NotificationEventType.TICKET_UPDATED
-                )
+                event_type: NotificationEventType = NotificationEventType.TICKET_UPDATED
                 if previous_status is not record.status:
                     event_type = (
                         NotificationEventType.TICKET_CLOSED
                         if record.status is TicketStatus.CLOSED
                         else NotificationEventType.TICKET_REOPENED
                     )
-                self._add_notification(
-                    session, record, event_type
-                )
+                self._add_notification(session, record, event_type)
             session.flush()
             return self._to_model(record)
 
