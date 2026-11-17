@@ -90,7 +90,7 @@ class Config:
         """
         return tuple(
             origin.strip()
-            for origin in self.CHIPARK_CORS_ALLOW_LIST.split(",")
+            for origin in self.CHIPARK_CORS_ALLOW_LIST.replace(" ", "").split(",")
             if origin.strip()
         )
 
