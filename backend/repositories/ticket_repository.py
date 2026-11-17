@@ -137,6 +137,28 @@ class TicketRepository:
             ).all()
             return [self._to_model(record) for record in records]
 
+    def get_tickets_for_park(self, park_name: str) -> list[Ticket]:
+        """
+        Retrieve all tickets for the given park.
+
+        Parameters
+        ----------
+        park_name : str
+            Park name associated with the requested tickets.
+
+        Returns
+        -------
+        list[Ticket]
+            Tickets for the requested park.
+        """
+        with self._session_factory() as session:
+            records: Sequence[TicketRecord] = session.scalars(
+                select(TicketRecord)
+                .where(TicketRecord.park_name == park_name)
+                .order_by(TicketRecord.ticket_id)
+            ).all()
+            return [self._to_model(record) for record in records]
+
     def close(self, ticket_id: int) -> Ticket:
         """
         Mark a ticket as closed and return the updated model.

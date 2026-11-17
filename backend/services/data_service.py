@@ -293,6 +293,28 @@ class DataService:
         park: Park = self.get_park(park_id)
         return self._ticket_repository.get_open_for_park(park.name)
 
+    def get_tickets_for_park(self, park_id: int) -> list[Ticket]:
+        """
+        Retrieve tickets associated with a park identifier.
+
+        Parameters
+        ----------
+        park_id : int
+            Database id of the park
+
+        Returns
+        -------
+        list[Ticket]
+            Open tickets associated with the requested park.
+
+        Raises
+        ------
+        LookupError
+            If the park does not exist.
+        """
+        park: Park = self.get_park(park_id)
+        return self._ticket_repository.get_tickets_for_park(park.name)
+
     def add_ticket(self, ticket: Ticket) -> Ticket:
         """
         Add a ticket to the database.
