@@ -19,6 +19,10 @@ uv run --project backend python -m backend.scripts.populate_parks
 uv run --project backend python -m backend.scripts.populate_tickets
 ```
 
+From the repo root a default .env file can be generated with `uv run --project backend python -m backend.scripts.new_env`.  
+The new file will have all the env vars currently used by the project.  
+These values override ones set in the actual environment, so to use the ones set in the actual environment just set the key to have no value in the .env file.
+
 The `backend.repositories` package provides SQLite-backed repositories for the
 `Park` and `Ticket` models. By default, `SqliteDatabase` stores data in
 `backend/data/chipark.sqlite3`; pass a path or `":memory:"` to select another
