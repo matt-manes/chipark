@@ -1,20 +1,17 @@
-import os
 from datetime import datetime
 from typing import Any
 
 import requests
 
 from backend.models.conditions import Conditions
+from backend.tools.config import Config
 
 
 class WeatherApiClient:
     """Fetch current weather conditions from WeatherAPI.
 
-    The API key is read from the ``CHIPARK_WEATHERAPI_KEY`` environment
-    variable when the client is constructed.
+    The API key is loaded through the shared application configuration.
     """
-
-    _WEATHERAPI_KEY_VARIABLE: str = "CHIPARK_WEATHERAPI_KEY"
 
     def __init__(self) -> None:
         """Initialize the client with its configured API key.
@@ -44,9 +41,9 @@ class WeatherApiClient:
         ValueError
             If the environment variable is missing or empty.
         """
-        _api_key: str | None = os.environ.get(self._WEATHERAPI_KEY_VARIABLE)
+        _api_key: str | None = Config().CHIPARK_WEATHERAPI_KEY
         if not _api_key:
-            raise ValueError("No weatherapi key set in environment.")
+            raise ValueError("Set CHIPARK_WEATHERAPI_KEY to use WeatherAPI.")
         return _api_key
 
     def get_current_conditions(self, lat: float, lon: float) -> Conditions:

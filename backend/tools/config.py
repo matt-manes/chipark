@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import os
-import tomllib
-from dataclasses import dataclass, fields
+from dataclasses import MISSING, dataclass, fields
 from pathlib import Path
 from threading import Lock
 from typing import ClassVar, Self, get_type_hints
 
-CONFIG_PATH: Path = Path(__file__).resolve().parent.parent / "config.toml"
+from dotenv import dotenv_values
+
+DOTENV_PATH: Path = Path(__file__).resolve().parent.parent / ".env"
 
 
 class ConfigError(ValueError):
@@ -41,6 +42,8 @@ class EnvValueParser:
         TypeError
             If ``field_type`` is unsupported.
         """
+        if field_type == str | None:
+            return value or None
         if field_type is bool:
             normalized_value: str = value.casefold()
             if normalized_value == "true":
@@ -60,10 +63,10 @@ class EnvValueParser:
 @dataclass(frozen=True, init=False)
 class Config:
     """
-    Load application settings once from TOML and matching environment variables.
+    Load application settings once from the process environment and ``.env``.
 
-    Each annotated dataclass field is loaded from the same-named TOML key and
-    may be overridden by an environment variable with the same name.
+    Process environment values are loaded first. Values from ``.env`` override
+    them when present.
 
     Notes
     -----
@@ -78,6 +81,17 @@ class Config:
     CHIPARK_CORS_ALLOW_LIST: str
     CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL: str
     CHIPARK_PG_URL: str
+    CHIPARK_ADMIN_EMAIL: str | None = None
+    CHIPARK_ADMIN_PASSWORD: str | None = None
+    CHIPARK_WEATHERAPI_KEY: str | None = None
+    CHIPARK_PG_USER: str | None = None
+    CHIPARK_PG_PASS: str | None = None
+    CHIPARK_GOOGLE_CLIENT_ID: str | None = None
+    CHIPARK_GOOGLE_CLIENT_SECRET: str | None = None
+    CHIPARK_GOOGLE_REDIRECT_URI: str | None = None
+    CHIPARK_TEST_PG_URL: str | None = None
+    CHIPARK_TEST_PG_USER: str | None = None
+    CHIPARK_TEST_PG_PASSWORD: str | None = None
 
     @property
     def cors_allow_origins(self) -> tuple[str, ...]:
@@ -112,32 +126,34 @@ class Config:
 
     def _load(self) -> None:
         """
-        Load declared fields from TOML and matching environment variables.
+        Load declared fields from the process environment and ``.env``.
 
         Raises
         ------
         ConfigError
-            If a declared field is missing from both configuration sources.
+            If a required field is missing or a value is invalid.
         """
-        settings: dict[str, object] = tomllib.loads(
-            CONFIG_PATH.read_text(encoding="utf-8")
-        )
         field_types: dict[str, object] = get_type_hints(type(self))
-
+        dotenv_settings: dict[str, str | None] = dotenv_values(DOTENV_PATH)
         for config_field in fields(self):
             field_name: str = config_field.name
-            if field_name in os.environ:
-                field_type: object = field_types[field_name]
-                value: object = self._parse_environment_value(
-                    field_name, os.environ[field_name], field_type
-                )
-            elif field_name in settings:
-                value = settings[field_name]
+            dotenv_value: str | None = dotenv_settings.get(field_name)
+            if dotenv_value is not None:
+                raw_value: str = dotenv_value
+            elif field_name in os.environ:
+                raw_value = os.environ[field_name]
+            elif config_field.default is not MISSING:
+                object.__setattr__(self, field_name, config_field.default)
+                continue
             else:
                 raise ConfigError(
                     f"Configuration field '{field_name}' is missing from "
-                    f"{CONFIG_PATH} and the environment."
+                    "the process environment and .env file."
                 )
+
+            value: object = self._parse_environment_value(
+                field_name, raw_value, field_types[field_name]
+            )
             object.__setattr__(self, field_name, value)
 
     @staticmethod

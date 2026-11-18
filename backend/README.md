@@ -32,7 +32,9 @@ closing, and deletion require an administrator token.
 
 ## Accounts and authorization
 
-Set `CHIPARK_ADMIN_EMAIL` and `CHIPARK_ADMIN_PASSWORD` before starting the API.
+Set `CHIPARK_ADMIN_EMAIL` and `CHIPARK_ADMIN_PASSWORD` in the process
+environment or `backend/.env` before starting the API. Values in `backend/.env`
+override values from the process environment.
 The configured account is created as an administrator or an existing account
 with that email is promoted and assigned the configured password. If these
 variables are omitted, startup requires an administrator to already exist.
@@ -42,19 +44,28 @@ Both return an opaque bearer token that expires after 24 hours. Send it as
 `Authorization: Bearer <token>` on authenticated requests. `POST /auth/logout`
 revokes the token; `GET /auth/me` returns the current account.
 
-Google sign-in is available through `GET /auth/google`. The configuration keys
-in `config.toml` are the same names used for environment variables:
-`CHIPARK_DATABASE`, `CHIPARK_CONDITIONS_TTL`,
-`CHIPARK_CORS_ALLOW_LIST`, `CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL`, and
-`CHIPARK_PG_URL`. `CHIPARK_CORS_ALLOW_LIST` accepts comma-separated frontend
-origins and defaults to `http://localhost:5173`. The conditions cache TTL is
-measured in seconds and defaults to 900 seconds (15 minutes).
-Configure `CHIPARK_GOOGLE_CLIENT_ID`, `CHIPARK_GOOGLE_CLIENT_SECRET`, and
-`CHIPARK_GOOGLE_REDIRECT_URI`; register the backend callback URL
+Google sign-in is available through `GET /auth/google`. Configure
+`CHIPARK_GOOGLE_CLIENT_ID`, `CHIPARK_GOOGLE_CLIENT_SECRET`, and
+`CHIPARK_GOOGLE_REDIRECT_URI` in the process environment or `backend/.env`;
+register the backend callback URL
 `/auth/google/callback` with Google. The callback redirects to
 `CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL` with the bearer token in the URL
 fragment. The configured frontend callback is
 `http://localhost:5173/auth/callback`.
+
+Configuration is loaded from `backend/.env` and the process environment.
+`CHIPARK_DATABASE` defaults to `postgresql`,
+`CHIPARK_CONDITIONS_TTL` defaults to 900 seconds (15 minutes),
+`CHIPARK_CORS_ALLOW_LIST` defaults to `http://localhost:5173` and accepts a
+comma-separated list of origins, `CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL` defaults
+to `http://localhost:5173/auth/callback`, and
+`CHIPARK_PG_URL` defaults to
+`postgresql+psycopg2://localhost:5432/chipark`. Optional settings include
+`CHIPARK_ADMIN_EMAIL`, `CHIPARK_ADMIN_PASSWORD`, `CHIPARK_WEATHERAPI_KEY`,
+`CHIPARK_PG_USER`, `CHIPARK_PG_PASS`, `CHIPARK_GOOGLE_CLIENT_ID`,
+`CHIPARK_GOOGLE_CLIENT_SECRET`, `CHIPARK_GOOGLE_REDIRECT_URI`, and
+`CHIPARK_TEST_PG_URL`, `CHIPARK_TEST_PG_USER`, and
+`CHIPARK_TEST_PG_PASSWORD`.
 
 Authenticated users can update password-based account details with
 `PATCH /auth/me`; Google-linked accounts manage their credentials through
@@ -64,14 +75,17 @@ and `GET /tickets/parks/{park_id}/open` returns a park's open tickets.
 
 To use PostgreSQL, set `CHIPARK_DATABASE` to `postgresql`, configure
 `CHIPARK_PG_URL` with the SQLAlchemy URL excluding credentials, and provide
-`CHIPARK_PG_USER` and `CHIPARK_PG_PASS` through the environment.
+`CHIPARK_PG_USER` and `CHIPARK_PG_PASS` through the process environment or
+`backend/.env`.
 
 Tests use SQLite by default. To run them against PostgreSQL, set
 `CHIPARK_TEST_PG_URL` to a dedicated PostgreSQL test database URL whose database
-name contains `test`, and set `CHIPARK_PG_USER` and `CHIPARK_PG_PASS`. Each test
-creates a uniquely named schema and drops it afterward, keeping test tables and
-sequences isolated from other runs. Do not point this URL at a development or
-production database.
+name contains `test`, and set `CHIPARK_TEST_PG_USER` and
+`CHIPARK_TEST_PG_PASSWORD` in the process environment or `backend/.env`. These
+test-specific credentials are used instead of the application credentials
+`CHIPARK_PG_USER` and `CHIPARK_PG_PASS`. Each test creates a uniquely named
+schema and drops it afterward, keeping test tables and sequences isolated from
+other runs. Do not point this URL at a development or production database.
 
 Any authenticated user can submit tickets. Only administrators can edit tickets
 with `PATCH /tickets/{ticket_id}`, close tickets with

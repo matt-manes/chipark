@@ -1,11 +1,12 @@
 import base64
 import hashlib
 import json
-import os
 from dataclasses import dataclass
 from urllib.parse import urlencode
 
 import httpx
+
+from backend.tools.config import Config
 
 from .auth_errors import AuthenticationError
 
@@ -53,12 +54,18 @@ class GoogleOAuthClient:
         AuthenticationError
             If required Google client configuration is missing.
         """
-        self._required_environment("CHIPARK_GOOGLE_CLIENT_SECRET")
+        config: Config = Config()
+        self._required_setting(
+            config.CHIPARK_GOOGLE_CLIENT_SECRET, "CHIPARK_GOOGLE_CLIENT_SECRET"
+        )
         query: str = urlencode(
             {
-                "client_id": self._required_environment("CHIPARK_GOOGLE_CLIENT_ID"),
-                "redirect_uri": self._required_environment(
-                    "CHIPARK_GOOGLE_REDIRECT_URI"
+                "client_id": self._required_setting(
+                    config.CHIPARK_GOOGLE_CLIENT_ID, "CHIPARK_GOOGLE_CLIENT_ID"
+                ),
+                "redirect_uri": self._required_setting(
+                    config.CHIPARK_GOOGLE_REDIRECT_URI,
+                    "CHIPARK_GOOGLE_REDIRECT_URI",
                 ),
                 "response_type": "code",
                 "scope": "openid email profile",
@@ -91,9 +98,16 @@ class GoogleOAuthClient:
         AuthenticationError
             If the exchange fails or Google does not verify the email.
         """
-        client_id: str = self._required_environment("CHIPARK_GOOGLE_CLIENT_ID")
-        client_secret: str = self._required_environment("CHIPARK_GOOGLE_CLIENT_SECRET")
-        redirect_uri: str = self._required_environment("CHIPARK_GOOGLE_REDIRECT_URI")
+        config: Config = Config()
+        client_id: str = self._required_setting(
+            config.CHIPARK_GOOGLE_CLIENT_ID, "CHIPARK_GOOGLE_CLIENT_ID"
+        )
+        client_secret: str = self._required_setting(
+            config.CHIPARK_GOOGLE_CLIENT_SECRET, "CHIPARK_GOOGLE_CLIENT_SECRET"
+        )
+        redirect_uri: str = self._required_setting(
+            config.CHIPARK_GOOGLE_REDIRECT_URI, "CHIPARK_GOOGLE_REDIRECT_URI"
+        )
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 token_response: httpx.Response = await client.post(
@@ -150,25 +164,26 @@ class GoogleOAuthClient:
         return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
 
     @staticmethod
-    def _required_environment(name: str) -> str:
-        """Read a required OAuth environment setting.
+    def _required_setting(value: str | None, name: str) -> str:
+        """Validate a required OAuth setting.
 
         Parameters
         ----------
+        value : str | None
+            Configured value to validate.
         name : str
-            Name of the required environment variable.
+            Name of the required setting for the error message.
 
         Returns
         -------
         str
-            Non-empty environment variable value.
+            Non-empty configured value.
 
         Raises
         ------
         AuthenticationError
-            If the variable is missing or blank.
+            If the setting is missing or blank.
         """
-        value: str | None = os.environ.get(name)
         if value is None or not value.strip():
             raise AuthenticationError(f"Set {name} to enable Google sign-in.")
         return value.strip()

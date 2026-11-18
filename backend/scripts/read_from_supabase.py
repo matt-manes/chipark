@@ -16,7 +16,6 @@ Fetch random amounts of data every few hours so project doesn't get paused for i
 
 
 def main() -> None:
-    """ """
     if "supabase" not in Config().CHIPARK_PG_URL:
         print("Environment not currently configured to use supabase remote db.")
         return

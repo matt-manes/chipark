@@ -1,4 +1,3 @@
-import os
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
@@ -25,11 +24,12 @@ from backend.repositories.postgresql_database import PostgresqlDatabase
 from backend.repositories.sqlite_database import SqliteDatabase
 from backend.repositories.ticket_repository import TicketRepository
 from backend.services.data_service import DataService
+from backend.tools.config import Config
 
 
 @pytest.fixture
 def database(tmp_path: Path) -> Iterator[Database]:
-    postgresql_url: str | None = os.environ.get("CHIPARK_TEST_PG_URL")
+    postgresql_url: str | None = Config().CHIPARK_TEST_PG_URL
     if postgresql_url is not None:
         yield from _postgresql_test_database(postgresql_url)
         return
@@ -93,11 +93,13 @@ def _postgresql_test_database(postgresql_url: str) -> Iterator[Database]:
             "in its name."
         )
 
-    username: str | None = os.environ.get("CHIPARK_PG_USER")
-    password: str | None = os.environ.get("CHIPARK_PG_PASS")
+    config: Config = Config()
+    username: str | None = config.CHIPARK_TEST_PG_USER
+    password: str | None = config.CHIPARK_TEST_PG_PASSWORD
     if username is None or password is None:
         raise RuntimeError(
-            "Set CHIPARK_PG_USER and CHIPARK_PG_PASS to use PostgreSQL tests."
+            "Set CHIPARK_TEST_PG_USER and CHIPARK_TEST_PG_PASSWORD to use "
+            "the PostgreSQL test database."
         )
 
     authenticated_url: URL = base_url.set(username=username, password=password)
@@ -122,7 +124,11 @@ def _postgresql_test_database(postgresql_url: str) -> Iterator[Database]:
             else schema_options
         )
         isolated_url: URL = base_url.set(query=query)
-        database = PostgresqlDatabase(isolated_url.render_as_string(hide_password=True))
+        database = PostgresqlDatabase(
+            isolated_url.render_as_string(hide_password=True),
+            username=username,
+            password=password,
+        )
         yield database
     finally:
         try:
@@ -250,8 +256,10 @@ def api_client(
         "get_database",
         staticmethod(lambda database_type: database),  # type: ignore
     )
-    monkeypatch.setenv("CHIPARK_ADMIN_EMAIL", "admin@example.com")
-    monkeypatch.setenv("CHIPARK_ADMIN_PASSWORD", "a-secure-admin-password")
+    monkeypatch.setattr(Config, "_instance", None)
+    config: Config = Config()
+    assert config.CHIPARK_ADMIN_EMAIL is not None
+    assert config.CHIPARK_ADMIN_PASSWORD is not None
 
     def provide_data_service() -> Iterator[DataService]:
         yield data_service
@@ -262,8 +270,8 @@ def api_client(
             login_response: Response = client.post(
                 "/auth/login",
                 json={
-                    "email": "admin@example.com",
-                    "password": "a-secure-admin-password",
+                    "email": config.CHIPARK_ADMIN_EMAIL,
+                    "password": config.CHIPARK_ADMIN_PASSWORD,
                 },
             )
             assert login_response.status_code == 200

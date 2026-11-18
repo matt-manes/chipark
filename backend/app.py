@@ -1,4 +1,3 @@
-import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -36,9 +35,10 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     try:
         data_service: DataService = DataService(database)
         auth_service: AuthService = AuthService(database.session_factory)
+        config: Config = Config()
         auth_service.bootstrap_admin(
-            os.environ.get("CHIPARK_ADMIN_EMAIL"),
-            os.environ.get("CHIPARK_ADMIN_PASSWORD"),
+            config.CHIPARK_ADMIN_EMAIL,
+            config.CHIPARK_ADMIN_PASSWORD,
         )
         application.state.data_service = data_service
         application.state.auth_service = auth_service

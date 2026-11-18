@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 from httpx2 import Response
 
+from backend.tools.config import Config
+
 
 def test_registration_creates_user_and_returns_bearer_token(
     api_client: TestClient,
@@ -25,8 +27,8 @@ def test_registration_returns_conflict_for_existing_email(
     response: Response = api_client.post(
         "/auth/register",
         json={
-            "email": "admin@example.com",
-            "password": "a-secure-admin-password",
+            "email": Config().CHIPARK_ADMIN_EMAIL,
+            "password": Config().CHIPARK_ADMIN_PASSWORD,
         },
     )
 
@@ -38,7 +40,7 @@ def test_login_returns_unauthorized_for_invalid_credentials(
 ) -> None:
     response: Response = api_client.post(
         "/auth/login",
-        json={"email": "admin@example.com", "password": "wrong-password"},
+        json={"email": Config().CHIPARK_ADMIN_EMAIL, "password": "wrong-password"},
     )
 
     assert response.status_code == 401
@@ -48,8 +50,8 @@ def test_logout_revokes_the_current_token(api_client: TestClient) -> None:
     login_response: Response = api_client.post(
         "/auth/login",
         json={
-            "email": "admin@example.com",
-            "password": "a-secure-admin-password",
+            "email": Config().CHIPARK_ADMIN_EMAIL,
+            "password": Config().CHIPARK_ADMIN_PASSWORD,
         },
     )
     token: str = login_response.json()["access_token"]
@@ -93,14 +95,14 @@ def test_profile_update_changes_password(api_client: TestClient) -> None:
     response: Response = api_client.patch(
         "/auth/me",
         json={
-            "current_password": "a-secure-admin-password",
+            "current_password": Config().CHIPARK_ADMIN_PASSWORD,
             "new_password": "another-secure-password",
         },
     )
     login_response: Response = api_client.post(
         "/auth/login",
         json={
-            "email": "admin@example.com",
+            "email": Config().CHIPARK_ADMIN_EMAIL,
             "password": "another-secure-password",
         },
     )

@@ -6,15 +6,6 @@ import pytest
 from backend.tools import config as config_module
 from backend.tools.config import Config, ConfigError, EnvValueParser
 
-DEFAULT_CONFIG_SETTINGS: str = (
-    'CHIPARK_DATABASE = "sqlite"\n'
-    "CHIPARK_CONDITIONS_TTL = 900\n"
-    'CHIPARK_CORS_ALLOW_LIST = "http://localhost:5173"\n'
-    "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL = "
-    '"http://localhost:5173/auth/callback"\n'
-    'CHIPARK_PG_URL = "postgresql+psycopg2://localhost:5432/chipark"\n'
-)
-
 
 @dataclass(frozen=True, init=False)
 class BooleanConfig(Config):
@@ -26,53 +17,60 @@ class UnsupportedTypeConfig(Config):
     options: list[str]
 
 
-def write_default_config(config_path: Path) -> None:
-    """Write all required settings to a temporary TOML file.
-
-    Parameters
-    ----------
-    config_path : Path
-        Destination path for the temporary settings file.
-    """
-    config_path.write_text(DEFAULT_CONFIG_SETTINGS, encoding="utf-8")
-
-
 @pytest.fixture(autouse=True)
-def reset_config_singleton(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(Config, "_instance", None)
-    monkeypatch.delenv("CHIPARK_DATABASE", raising=False)
-    monkeypatch.delenv("CHIPARK_CONDITIONS_TTL", raising=False)
-    monkeypatch.delenv("CHIPARK_CORS_ALLOW_LIST", raising=False)
-    monkeypatch.delenv("CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL", raising=False)
-    monkeypatch.delenv("CHIPARK_PG_URL", raising=False)
-
-
-def test_loads_database_from_toml(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    config_path: Path = tmp_path / "config.toml"
-    write_default_config(config_path)
-    monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
-
-    config: Config = Config()
-
-    assert config.CHIPARK_DATABASE == "sqlite"
-    assert config.CHIPARK_CONDITIONS_TTL == 900
-    assert config.CHIPARK_CORS_ALLOW_LIST == "http://localhost:5173"
-    assert (
-        config.CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL
-        == "http://localhost:5173/auth/callback"
+def reset_config_singleton(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    dotenv_path: Path = tmp_path / ".env"
+    dotenv_path.write_text(
+        'CHIPARK_DATABASE="postgresql"\n'
+        "CHIPARK_CONDITIONS_TTL=900\n"
+        'CHIPARK_CORS_ALLOW_LIST="http://localhost:5173"\n'
+        'CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL="http://localhost:5173/auth/callback"\n'
+        'CHIPARK_PG_URL="postgresql+psycopg2://localhost:5432/chipark"\n',
+        encoding="utf-8",
     )
-    assert config.CHIPARK_PG_URL == ("postgresql+psycopg2://localhost:5432/chipark")
+    monkeypatch.setattr(config_module, "DOTENV_PATH", dotenv_path)
+    monkeypatch.setattr(Config, "_instance", None)
+    for field_name in (
+        "CHIPARK_DATABASE",
+        "CHIPARK_CONDITIONS_TTL",
+        "CHIPARK_CORS_ALLOW_LIST",
+        "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL",
+        "CHIPARK_PG_URL",
+        "CHIPARK_ADMIN_EMAIL",
+        "CHIPARK_ADMIN_PASSWORD",
+        "CHIPARK_WEATHERAPI_KEY",
+        "CHIPARK_PG_USER",
+        "CHIPARK_PG_PASS",
+        "CHIPARK_GOOGLE_CLIENT_ID",
+        "CHIPARK_GOOGLE_CLIENT_SECRET",
+        "CHIPARK_GOOGLE_REDIRECT_URI",
+        "CHIPARK_TEST_PG_URL",
+        "CHIPARK_TEST_PG_USER",
+        "CHIPARK_TEST_PG_PASSWORD",
+        "enabled",
+        "options",
+    ):
+        monkeypatch.delenv(field_name, raising=False)
 
 
-def test_environment_value_overrides_toml(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_raises_when_required_settings_are_missing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    config_path: Path = tmp_path / "config.toml"
-    write_default_config(config_path)
-    monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
-    monkeypatch.setenv("CHIPARK_DATABASE", "postgresql")
+    dotenv_path: Path = tmp_path / "empty.env"
+    dotenv_path.write_text("", encoding="utf-8")
+    monkeypatch.setattr(config_module, "DOTENV_PATH", dotenv_path)
+
+    with pytest.raises(ConfigError, match="CHIPARK_DATABASE.*missing"):
+        Config()
+
+
+def test_environment_values_are_used_when_dotenv_keys_are_absent(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    dotenv_path: Path = tmp_path / "empty.env"
+    dotenv_path.write_text("", encoding="utf-8")
+    monkeypatch.setattr(config_module, "DOTENV_PATH", dotenv_path)
+    monkeypatch.setenv("CHIPARK_DATABASE", "sqlite")
     monkeypatch.setenv("CHIPARK_CONDITIONS_TTL", "300")
     monkeypatch.setenv(
         "CHIPARK_CORS_ALLOW_LIST",
@@ -86,11 +84,8 @@ def test_environment_value_overrides_toml(
 
     config: Config = Config()
 
-    assert config.CHIPARK_DATABASE == "postgresql"
+    assert config.CHIPARK_DATABASE == "sqlite"
     assert config.CHIPARK_CONDITIONS_TTL == 300
-    assert config.CHIPARK_CORS_ALLOW_LIST == (
-        "http://localhost:5173,https://chipark.example.com"
-    )
     assert config.cors_allow_origins == (
         "http://localhost:5173",
         "https://chipark.example.com",
@@ -102,46 +97,82 @@ def test_environment_value_overrides_toml(
     assert config.CHIPARK_PG_URL == "postgresql+psycopg2://db.example/chipark"
 
 
-def test_reuses_singleton_without_reloading(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_dotenv_values_override_environment(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    config_path: Path = tmp_path / "config.toml"
-    write_default_config(config_path)
-    monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
-
-    first_config: Config = Config()
-    config_path.write_text(
-        DEFAULT_CONFIG_SETTINGS.replace('"sqlite"', '"postgresql"', 1),
+    dotenv_path: Path = tmp_path / "override.env"
+    dotenv_path.write_text(
+        'CHIPARK_DATABASE="sqlite"\n'
+        "CHIPARK_CONDITIONS_TTL=900\n"
+        'CHIPARK_CORS_ALLOW_LIST="http://localhost:5173"\n'
+        'CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL="http://localhost:5173/auth/callback"\n'
+        'CHIPARK_PG_URL="postgresql+psycopg2://localhost:5432/chipark"\n',
         encoding="utf-8",
     )
+    monkeypatch.setattr(config_module, "DOTENV_PATH", dotenv_path)
+    monkeypatch.setenv("CHIPARK_DATABASE", "postgresql")
+
+    config: Config = Config()
+
+    assert config.CHIPARK_DATABASE == "sqlite"
+
+
+def test_loads_optional_settings_from_dotenv(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    dotenv_path: Path = tmp_path / "credentials.env"
+    dotenv_path.write_text(
+        'CHIPARK_DATABASE="postgresql"\n'
+        "CHIPARK_CONDITIONS_TTL=900\n"
+        'CHIPARK_CORS_ALLOW_LIST="http://localhost:5173"\n'
+        'CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL="http://localhost:5173/auth/callback"\n'
+        'CHIPARK_PG_URL="postgresql+psycopg2://localhost:5432/chipark"\n'
+        "CHIPARK_ADMIN_EMAIL=admin@example.com\n"
+        "CHIPARK_GOOGLE_CLIENT_ID=google-client\n"
+        "CHIPARK_TEST_PG_USER=test-user\n"
+        "CHIPARK_TEST_PG_PASSWORD=test-password\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(config_module, "DOTENV_PATH", dotenv_path)
+
+    config: Config = Config()
+
+    assert config.CHIPARK_ADMIN_EMAIL == "admin@example.com"
+    assert config.CHIPARK_GOOGLE_CLIENT_ID == "google-client"
+    assert config.CHIPARK_TEST_PG_USER == "test-user"
+    assert config.CHIPARK_TEST_PG_PASSWORD == "test-password"
+    assert config.CHIPARK_ADMIN_PASSWORD is None
+
+
+def test_reuses_singleton_without_reloading(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    first_config: Config = Config()
+    dotenv_path: Path = tmp_path / "updated.env"
+    dotenv_path.write_text(
+        'CHIPARK_DATABASE="sqlite"\n'
+        "CHIPARK_CONDITIONS_TTL=900\n"
+        'CHIPARK_CORS_ALLOW_LIST="http://localhost:5173"\n'
+        'CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL="http://localhost:5173/auth/callback"\n'
+        'CHIPARK_PG_URL="postgresql+psycopg2://localhost:5432/chipark"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(config_module, "DOTENV_PATH", dotenv_path)
+
     second_config: Config = Config()
 
     assert second_config is first_config
-    assert second_config.CHIPARK_DATABASE == "sqlite"
+    assert second_config.CHIPARK_DATABASE == "postgresql"
 
 
-def test_raises_when_field_is_missing_from_toml_and_environment(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    config_path: Path = tmp_path / "config.toml"
-    config_path.write_text("", encoding="utf-8")
-    monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
-
-    with pytest.raises(ConfigError, match="CHIPARK_DATABASE.*missing"):
-        Config()
-
-
-def test_rejects_invalid_environment_value_for_boolean_field() -> None:
-    with pytest.raises(ValueError, match="true.*false"):
-        EnvValueParser.parse("yes", bool)
+def test_raises_when_subclass_field_has_no_value() -> None:
+    with pytest.raises(ConfigError, match="enabled.*missing"):
+        BooleanConfig()
 
 
 def test_config_wraps_invalid_environment_value_with_field_name(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    config_path: Path = tmp_path / "config.toml"
-    write_default_config(config_path)
-    monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
     monkeypatch.setenv("enabled", "yes")
 
     with pytest.raises(ConfigError, match="enabled.*invalid value"):
@@ -149,11 +180,8 @@ def test_config_wraps_invalid_environment_value_with_field_name(
 
 
 def test_config_wraps_unsupported_environment_type_with_field_name(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    config_path: Path = tmp_path / "config.toml"
-    write_default_config(config_path)
-    monkeypatch.setattr(config_module, "CONFIG_PATH", config_path)
     monkeypatch.setenv("options", "value")
 
     with pytest.raises(ConfigError, match="options.*unsupported type"):

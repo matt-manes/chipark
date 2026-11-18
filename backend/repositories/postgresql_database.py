@@ -1,13 +1,13 @@
-import os
-
 from sqlalchemy import URL, create_engine, make_url
 from sqlalchemy.engine import Engine
+
+from backend.tools.config import Config
 
 from .database import Database
 
 
 class PostgresqlDatabase(Database):
-    """Configure a PostgreSQL database using URL and environment credentials.
+    """Configure a PostgreSQL database using the shared settings.
 
     Parameters
     ----------
@@ -17,21 +17,31 @@ class PostgresqlDatabase(Database):
     Raises
     ------
     ValueError
-        If PostgreSQL username or password environment variables are missing.
+        If PostgreSQL username or password settings are missing.
     """
 
-    _USERNAME_ENVIRONMENT_VARIABLE: str = "CHIPARK_PG_USER"
-    _PASSWORD_ENVIRONMENT_VARIABLE: str = "CHIPARK_PG_PASS"
-
-    def __init__(self, database_url: str) -> None:
+    def __init__(
+        self,
+        database_url: str,
+        username: str | None = None,
+        password: str | None = None,
+    ) -> None:
         """Initialize the PostgreSQL database.
 
         Parameters
         ----------
         database_url : str
             SQLAlchemy PostgreSQL URL without username or password.
+        username : str | None
+            Optional explicit database username, used instead of application
+            credentials.
+        password : str | None
+            Optional explicit database password, used instead of application
+            credentials.
         """
         self._database_url: str = database_url
+        self._username: str | None = username
+        self._password: str | None = password
         super().__init__()
 
     def _create_engine(self) -> Engine:
@@ -45,14 +55,18 @@ class PostgresqlDatabase(Database):
         Raises
         ------
         ValueError
-            If either required credential environment variable is missing.
+            If either required credential setting is missing.
         """
-        username: str | None = os.environ.get(self._USERNAME_ENVIRONMENT_VARIABLE)
-        password: str | None = os.environ.get(self._PASSWORD_ENVIRONMENT_VARIABLE)
+        config: Config = Config()
+        username: str | None = (
+            self._username if self._username is not None else config.CHIPARK_PG_USER
+        )
+        password: str | None = (
+            self._password if self._password is not None else config.CHIPARK_PG_PASS
+        )
         if username is None or password is None:
             raise ValueError(
-                f"Set {self._USERNAME_ENVIRONMENT_VARIABLE} and "
-                f"{self._PASSWORD_ENVIRONMENT_VARIABLE} to use PostgreSQL."
+                "Set CHIPARK_PG_USER and CHIPARK_PG_PASS to use PostgreSQL."
             )
 
         database_url: URL = make_url(self._database_url)

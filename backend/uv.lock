@@ -60,6 +60,7 @@ dependencies = [
     { name = "mcp" },
     { name = "psycopg2" },
     { name = "pytest" },
+    { name = "python-dotenv" },
     { name = "ruff" },
     { name = "sqlalchemy" },
 ]
@@ -73,6 +74,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=2.3.0" },
     { name = "psycopg2", specifier = ">=2.9.13" },
     { name = "pytest", specifier = ">=9.1.1" },
+    { name = "python-dotenv", specifier = ">=1.2.4" },
     { name = "ruff", specifier = ">=0.17.3" },
     { name = "sqlalchemy", specifier = ">=2.1.6" },
 ]

@@ -1,9 +1,11 @@
+from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
 from backend.models.user import AuthenticatedUser, UserRole
 from backend.repositories.database import Database
+from backend.services import google_oauth
 from backend.services.auth_service import AuthenticationError, AuthService
 
 
@@ -80,10 +82,14 @@ def test_google_login_url_uses_pkce(
     auth_service: AuthService,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("CHIPARK_GOOGLE_CLIENT_ID", "client-id")
-    monkeypatch.setenv(
-        "CHIPARK_GOOGLE_REDIRECT_URI",
-        "http://localhost:8000/auth/google/callback",
+    monkeypatch.setattr(
+        google_oauth,
+        "Config",
+        lambda: SimpleNamespace(
+            CHIPARK_GOOGLE_CLIENT_ID="client-id",
+            CHIPARK_GOOGLE_CLIENT_SECRET="client-secret",
+            CHIPARK_GOOGLE_REDIRECT_URI="http://localhost:8000/auth/google/callback",
+        ),
     )
 
     authorization_url: str = auth_service.begin_google_login()
