@@ -1,6 +1,8 @@
 import random
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
+
+import psycopg2
 
 from ..models.park import Park
 from ..repositories.database import Database
@@ -18,9 +20,11 @@ def main() -> None:
     if "supabase" not in Config().CHIPARK_PG_URL:
         print("Environment not currently configured to use supabase remote db.")
         return
-    database: Database = DatabaseFactory.get_database("postgres")
-    data_service: DataService = DataService(database)
+    consecutive_fails: int = 0
+    fail_limit: int = 5
     while "forever":
+        database: Database = DatabaseFactory.get_database("postgres")
+        data_service: DataService = DataService(database)
         print(f"Fetching data at {datetime.now()}.")
         try:
             print("Fetching parks")
@@ -36,11 +40,20 @@ def main() -> None:
                     ],
                     sep="\n",
                 )
+        except psycopg2.OperationalError:
+            consecutive_fails += 1
+            if consecutive_fails >= fail_limit:
+                print("Fail limit exceeded")
+            else:
+                print("Server closed connection. Retrying...")
+                continue
         except Exception as e:
             print(e)
+        database.close()
+        consecutive_fails = 0
         sleep_time: int = random.randint(3600, 3600 * 6)
-        print(f"Sleeping for {float(sleep_time)/3600:.2f} hours.")
-        time.sleep(random.randint(3600, 3600 * 6))
+        print(f"Sleeping until {datetime.now() + timedelta(seconds=sleep_time)}.")
+        time.sleep(sleep_time)
 
 
 if __name__ == "__main__":
