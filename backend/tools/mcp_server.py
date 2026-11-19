@@ -204,6 +204,8 @@ class ChiparkMcpServer:
             Exact name of an existing park.
         issue : str
             User-submitted issue description.
+        ctx : Context
+            MCP context containing the authenticated user.
         estimated_hours : float or None, default=None
             Estimated repair duration, if known.
 

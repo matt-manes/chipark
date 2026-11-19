@@ -41,7 +41,18 @@ class JsonLogFormatter(logging.Formatter):
     """Format Python log records as structured JSON for Render logs."""
 
     def format(self, record: logging.LogRecord) -> str:
-        """Serialize one log record and its active trace identifiers."""
+        """Serialize one log record and its active trace identifiers.
+
+        Parameters
+        ----------
+        record : logging.LogRecord
+            Log record to serialize.
+
+        Returns
+        -------
+        str
+            Compact JSON representation of the record.
+        """
         span: Span = get_current_span()
         span_context: SpanContext = span.get_span_context()
         entry: dict[str, object] = {
@@ -180,13 +191,25 @@ class Telemetry:
 
     @classmethod
     def instrument_app(cls, application: FastAPI) -> None:
-        """Instrument FastAPI request handling."""
+        """Instrument FastAPI request handling.
+
+        Parameters
+        ----------
+        application : FastAPI
+            Application to instrument.
+        """
         cls.initialize()
         FastAPIInstrumentor.instrument_app(application)
 
     @staticmethod
     def instrument_database(engine: Engine) -> None:
-        """Instrument SQLAlchemy operations for one application engine."""
+        """Instrument SQLAlchemy operations for one application engine.
+
+        Parameters
+        ----------
+        engine : Engine
+            SQLAlchemy engine to instrument.
+        """
         SQLAlchemyInstrumentor().instrument(engine=engine)
 
     @staticmethod
@@ -200,7 +223,20 @@ class Telemetry:
         request: Request,
         call_next: RequestResponseEndpoint,
     ) -> Response:
-        """Record a request metric and structured completion log."""
+        """Record a request metric and structured completion log.
+
+        Parameters
+        ----------
+        request : Request
+            HTTP request being handled.
+        call_next : RequestResponseEndpoint
+            Next middleware or application handler in the request chain.
+
+        Returns
+        -------
+        Response
+            Response returned by the next handler.
+        """
         start_time: float = time.perf_counter()
         status_code: int = 500
         try:
@@ -244,19 +280,64 @@ class Telemetry:
 
     @staticmethod
     def _has_otlp_endpoint(signal_endpoint: str | None, config: Config) -> bool:
-        """Return whether a global or signal-specific OTLP endpoint is configured."""
+        """Return whether a global or signal-specific OTLP endpoint is configured.
+
+        Parameters
+        ----------
+        signal_endpoint : str or None
+            Endpoint configured for an individual signal.
+        config : Config
+            Application configuration containing the shared endpoint.
+
+        Returns
+        -------
+        bool
+            Whether either endpoint is configured.
+        """
         return bool(signal_endpoint or config.OTEL_EXPORTER_OTLP_ENDPOINT)
 
     @staticmethod
     def _get_otlp_endpoint(signal_endpoint: str | None, config: Config) -> str | None:
-        """Prefer a signal-specific endpoint over the global endpoint."""
+        """Prefer a signal-specific endpoint over the global endpoint.
+
+        Parameters
+        ----------
+        signal_endpoint : str or None
+            Endpoint configured for an individual signal.
+        config : Config
+            Application configuration containing the shared endpoint.
+
+        Returns
+        -------
+        str or None
+            Signal-specific endpoint, shared endpoint, or ``None`` if neither
+            is configured.
+        """
         return signal_endpoint or config.OTEL_EXPORTER_OTLP_ENDPOINT
 
     @staticmethod
     def _get_otlp_headers(
         signal_headers: str | None, shared_headers: str | None
     ) -> dict[str, str] | None:
-        """Parse OTLP's comma-separated key/value header configuration."""
+        """Parse OTLP's comma-separated key/value header configuration.
+
+        Parameters
+        ----------
+        signal_headers : str or None
+            Headers configured for an individual signal.
+        shared_headers : str or None
+            Headers shared by all signals.
+
+        Returns
+        -------
+        dict of str to str or None
+            Parsed headers, or ``None`` when no headers are configured.
+
+        Raises
+        ------
+        ValueError
+            If a configured header is not a ``key=value`` pair.
+        """
         headers_value: str | None = signal_headers or shared_headers
         if headers_value is None:
             return None
@@ -277,7 +358,20 @@ class Telemetry:
         configured_attributes: str | None,
         service_name: str,
     ) -> dict[str, str]:
-        """Combine configured resource attributes with service and host identity."""
+        """Combine configured attributes with service and host identity.
+
+        Parameters
+        ----------
+        configured_attributes : str or None
+            Comma-separated OpenTelemetry resource attributes.
+        service_name : str
+            Service name assigned to the resource.
+
+        Returns
+        -------
+        dict of str to str
+            Resource attributes including service and host names.
+        """
         attributes: dict[str, str] = cls._parse_resource_attributes(
             configured_attributes
         )
@@ -290,7 +384,24 @@ class Telemetry:
     def _parse_resource_attributes(
         configured_attributes: str | None,
     ) -> dict[str, str]:
-        """Parse OpenTelemetry's comma-separated resource attribute setting."""
+        """Parse OpenTelemetry's comma-separated resource attribute setting.
+
+        Parameters
+        ----------
+        configured_attributes : str or None
+            Comma-separated ``key=value`` attributes, with percent-encoded
+            values where needed.
+
+        Returns
+        -------
+        dict of str to str
+            Parsed resource attributes.
+
+        Raises
+        ------
+        ValueError
+            If an attribute is not a ``key=value`` pair.
+        """
         if not configured_attributes:
             return {}
 

@@ -84,6 +84,8 @@ async def stream_notifications(
 
     Parameters
     ----------
+    request : Request
+        Request used to keep the stream active for the connection lifetime.
     data_service : DataService
         App-scoped service backed by the configured database.
     user : User

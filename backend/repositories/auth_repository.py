@@ -108,7 +108,18 @@ class AuthRepository:
             )
 
     def get_user(self, user_id: int) -> User | None:
-        """Retrieve a public account by identifier."""
+        """Retrieve a public account by identifier.
+
+        Parameters
+        ----------
+        user_id : int
+            Database identifier of the account.
+
+        Returns
+        -------
+        User or None
+            Public account, or ``None`` if no account matches.
+        """
         with self._session_factory() as session:
             record: UserRecord | None = session.get(UserRecord, user_id)
             return None if record is None else self._to_user(record)
@@ -129,7 +140,25 @@ class AuthRepository:
             )
 
     def update_user_role(self, user_id: int, role: UserRole) -> User:
-        """Set an account's role."""
+        """Set an account's role.
+
+        Parameters
+        ----------
+        user_id : int
+            Database identifier of the account.
+        role : UserRole
+            Role to assign to the account.
+
+        Returns
+        -------
+        User
+            The updated public account.
+
+        Raises
+        ------
+        LookupError
+            If no account matches ``user_id``.
+        """
         with self._session_factory.begin() as session:
             record: UserRecord | None = session.get(UserRecord, user_id)
             if record is None:
@@ -141,7 +170,27 @@ class AuthRepository:
     def set_user_active(
         self, user_id: int, is_active: bool, revoked_at: datetime
     ) -> User:
-        """Enable or disable an account, revoking its active tokens when disabled."""
+        """Enable or disable an account and revoke tokens when disabled.
+
+        Parameters
+        ----------
+        user_id : int
+            Database identifier of the account.
+        is_active : bool
+            Whether the account should be enabled.
+        revoked_at : datetime
+            Timestamp to assign to active tokens being revoked.
+
+        Returns
+        -------
+        User
+            The updated public account.
+
+        Raises
+        ------
+        LookupError
+            If no account matches ``user_id``.
+        """
         with self._session_factory.begin() as session:
             record: UserRecord | None = session.get(UserRecord, user_id)
             if record is None:

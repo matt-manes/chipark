@@ -20,7 +20,20 @@ def get_users(
     request: Request,
     _admin: Annotated[User, Depends(AuthDependencies.require_admin)],
 ) -> list[AdminUserResponse]:
-    """Return all user accounts with their limited administrative details."""
+    """Return all user accounts with their limited administrative details.
+
+    Parameters
+    ----------
+    request : Request
+        Request containing the application authentication service.
+    _admin : User
+        Authenticated administrator supplied by the dependency.
+
+    Returns
+    -------
+    list of AdminUserResponse
+        Limited administrative details for all accounts.
+    """
     users: list[User] = request.app.state.auth_service.get_users()
     return [_to_admin_response(user) for user in users]
 
@@ -31,7 +44,27 @@ def get_user(
     request: Request,
     _admin: Annotated[User, Depends(AuthDependencies.require_admin)],
 ) -> AdminUserResponse:
-    """Return limited details for one account."""
+    """Return limited details for one account.
+
+    Parameters
+    ----------
+    user_id : int
+        Identifier of the account to retrieve.
+    request : Request
+        Request containing the application authentication service.
+    _admin : User
+        Authenticated administrator supplied by the dependency.
+
+    Returns
+    -------
+    AdminUserResponse
+        Limited administrative details for the account.
+
+    Raises
+    ------
+    HTTPException
+        If the account does not exist.
+    """
     try:
         user: User = request.app.state.auth_service.get_user(user_id)
     except LookupError as error:
@@ -46,7 +79,29 @@ def get_user_tickets(
     data_service: Annotated[DataService, Depends(DataService.get_default_service)],
     _admin: Annotated[User, Depends(AuthDependencies.require_admin)],
 ) -> list[Ticket]:
-    """Return tickets submitted by one account."""
+    """Return tickets submitted by one account.
+
+    Parameters
+    ----------
+    user_id : int
+        Identifier of the account whose tickets are requested.
+    request : Request
+        Request containing the application authentication service.
+    data_service : DataService
+        Injected service used to retrieve the account's tickets.
+    _admin : User
+        Authenticated administrator supplied by the dependency.
+
+    Returns
+    -------
+    list of Ticket
+        Tickets submitted by the account.
+
+    Raises
+    ------
+    HTTPException
+        If the account does not exist.
+    """
     try:
         request.app.state.auth_service.get_user(user_id)
         return data_service.get_tickets_for_user(user_id)
@@ -61,7 +116,29 @@ def update_user_role(
     request: Request,
     _admin: Annotated[User, Depends(AuthDependencies.require_admin)],
 ) -> AdminUserResponse:
-    """Change one account between regular user and administrator."""
+    """Change an account's role.
+
+    Parameters
+    ----------
+    user_id : int
+        Identifier of the account to update.
+    changes : UserRoleUpdate
+        Requested role change.
+    request : Request
+        Request containing the application authentication service.
+    _admin : User
+        Authenticated administrator supplied by the dependency.
+
+    Returns
+    -------
+    AdminUserResponse
+        Updated administrative account details.
+
+    Raises
+    ------
+    HTTPException
+        If the account does not exist.
+    """
     try:
         user: User = request.app.state.auth_service.update_user_role(
             user_id, changes.role
@@ -78,7 +155,29 @@ def update_user_status(
     request: Request,
     _admin: Annotated[User, Depends(AuthDependencies.require_admin)],
 ) -> AdminUserResponse:
-    """Enable or disable one account."""
+    """Enable or disable an account.
+
+    Parameters
+    ----------
+    user_id : int
+        Identifier of the account to update.
+    changes : UserStatusUpdate
+        Requested active status.
+    request : Request
+        Request containing the application authentication service.
+    _admin : User
+        Authenticated administrator supplied by the dependency.
+
+    Returns
+    -------
+    AdminUserResponse
+        Updated administrative account details.
+
+    Raises
+    ------
+    HTTPException
+        If the account does not exist.
+    """
     try:
         user: User = request.app.state.auth_service.set_user_active(
             user_id, changes.is_active
@@ -89,7 +188,18 @@ def update_user_status(
 
 
 def _to_admin_response(user: User) -> AdminUserResponse:
-    """Convert an account model to the admin-only public representation."""
+    """Convert an account model to the admin-only public representation.
+
+    Parameters
+    ----------
+    user : User
+        Account model to convert.
+
+    Returns
+    -------
+    AdminUserResponse
+        Public account details available to administrators.
+    """
     return AdminUserResponse(
         user_id=user.user_id,
         email=user.email,

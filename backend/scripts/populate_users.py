@@ -53,7 +53,18 @@ class SampleUserPopulator:
             self._database.close()
 
     def _register_user(self, email: str) -> dict[str, str | int]:
-        """Register one account and preserve its generated credentials."""
+        """Register one account and preserve its generated credentials.
+
+        Parameters
+        ----------
+        email : str
+            Email address for the account to register.
+
+        Returns
+        -------
+        dict of str to str or int
+            Registered account's email, ID, and generated password.
+        """
         password: str = secrets.token_urlsafe(18)
         authenticated_user: AuthenticatedUser = self._auth_service.register(
             email, password

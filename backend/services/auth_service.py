@@ -258,18 +258,70 @@ class AuthService:
         return self._repository.get_all_users()
 
     def get_user(self, user_id: int) -> User:
-        """Return one account or raise when the identifier is unknown."""
+        """Return one account or raise when the identifier is unknown.
+
+        Parameters
+        ----------
+        user_id : int
+            Database identifier of the account.
+
+        Returns
+        -------
+        User
+            Matching public account.
+
+        Raises
+        ------
+        LookupError
+            If no account matches ``user_id``.
+        """
         user: User | None = self._repository.get_user(user_id)
         if user is None:
             raise LookupError(f"User {user_id} was not found")
         return user
 
     def update_user_role(self, user_id: int, role: UserRole) -> User:
-        """Change an account's role."""
+        """Change an account's role.
+
+        Parameters
+        ----------
+        user_id : int
+            Database identifier of the account.
+        role : UserRole
+            Role to assign to the account.
+
+        Returns
+        -------
+        User
+            Updated public account.
+
+        Raises
+        ------
+        LookupError
+            If no account matches ``user_id``.
+        """
         return self._repository.update_user_role(user_id, role)
 
     def set_user_active(self, user_id: int, is_active: bool) -> User:
-        """Enable or disable an account and revoke its tokens if disabled."""
+        """Enable or disable an account and revoke its tokens if disabled.
+
+        Parameters
+        ----------
+        user_id : int
+            Database identifier of the account.
+        is_active : bool
+            Whether the account should be enabled.
+
+        Returns
+        -------
+        User
+            Updated public account.
+
+        Raises
+        ------
+        LookupError
+            If no account matches ``user_id``.
+        """
         return self._repository.set_user_active(user_id, is_active, self._utc_now())
 
     def update_profile(

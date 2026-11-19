@@ -23,7 +23,13 @@ class SqliteDatabase(Database):
     """
 
     def __init__(self, database_path: Path | str = DEFAULT_DATABASE_PATH) -> None:
-        """Initialize the SQLite database at ``database_path``."""
+        """Initialize the SQLite database at ``database_path``.
+
+        Parameters
+        ----------
+        database_path : Path or str, default=DEFAULT_DATABASE_PATH
+            SQLite file path, or ``":memory:"`` for an in-memory database.
+        """
         self._database_path: Path | str = database_path
         super().__init__()
 
