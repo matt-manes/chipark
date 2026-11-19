@@ -56,7 +56,9 @@ export default function ParksPage({
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE
   )
-  const wards: string[] = [...new Set(parks.map(park => park.ward))].sort()
+  const wards: string[] = [...new Set(parks.map(park => park.ward))].sort(
+    (left, right) => Number(left) - Number(right)
+  )
   const zipCodes: string[] = [
     ...new Set(parks.map(park => park.zip_code).filter((value): value is string => value !== null))
   ].sort()
