@@ -72,14 +72,19 @@ export class ChiparkApiClient {
   }
 
   async getAdminUsers (signal?: AbortSignal): Promise<AdminUser[]> {
-    const response = await this.client.get<AdminUser[]>('/admin/users', { signal })
+    const response = await this.client.get<AdminUser[]>('/admin/users', {
+      signal
+    })
     return response.data
   }
 
   async getAdminUser (userId: number, signal?: AbortSignal): Promise<AdminUser> {
-    const response = await this.client.get<AdminUser>(`/admin/users/${userId}`, {
-      signal
-    })
+    const response = await this.client.get<AdminUser>(
+      `/admin/users/${userId}`,
+      {
+        signal
+      }
+    )
     return response.data
   }
 
@@ -236,7 +241,7 @@ export class ChiparkApiClient {
 
     const reader: ReadableStreamDefaultReader<Uint8Array> =
       response.body.getReader()
-    const decoder: TextDecoder = new TextDecoder()
+    const decoder: InstanceType<typeof TextDecoder> = new TextDecoder()
     let pendingText: string = ''
     let currentId: number | null = null
     let currentData: string[] = []
