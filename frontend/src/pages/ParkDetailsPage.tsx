@@ -31,8 +31,6 @@ export default function ParkDetailsPage({
 
   useEffect(() => {
     const controller: AbortController = new AbortController()
-    setLoading(true)
-    setError(null)
     void Promise.all([
       api.getPark(parkId, controller.signal),
       api.getConditions(parkId, controller.signal),

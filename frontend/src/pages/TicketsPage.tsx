@@ -38,8 +38,6 @@ export default function TicketsPage({
 
   useEffect(() => {
     const controller: AbortController = new AbortController()
-    setLoading(true)
-    setError(null)
     void Promise.all([
       api.getTickets(controller.signal),
       api.getParks(controller.signal)
@@ -88,6 +86,8 @@ export default function TicketsPage({
     try {
       if (status === TicketStatusValue.OPEN) await api.reopenTicket(ticketId)
       else await api.closeTicket(ticketId)
+      setLoading(true)
+      setError(null)
       setRefreshVersion(version => version + 1)
     } catch (reason) {
       setError(ApiErrorFormatter.getMessage(reason))

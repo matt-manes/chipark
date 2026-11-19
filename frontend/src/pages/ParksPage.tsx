@@ -34,8 +34,6 @@ export default function ParksPage({
 
   useEffect(() => {
     const controller: AbortController = new AbortController()
-    setLoading(true)
-    setError(null)
     void api.getParks(controller.signal)
       .then(result => {
         if (!controller.signal.aborted) setParks(result)

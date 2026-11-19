@@ -30,10 +30,6 @@ export default function AdminUserDetailsPage({
 
   useEffect(() => {
     const controller: AbortController = new AbortController()
-    setLoading(true)
-    setAccount(null)
-    setTickets([])
-    setError(null)
     void Promise.all([
       api.getAdminUser(userId, controller.signal),
       api.getTicketsForUser(userId, controller.signal)

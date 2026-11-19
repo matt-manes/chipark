@@ -149,6 +149,7 @@ export default function AppContent({
   } else if (parkId !== null) {
     page = (
       <ParkDetailsPage
+        key={parkId}
         api={api}
         parkId={parkId}
         user={user}
@@ -183,6 +184,7 @@ export default function AppContent({
   } else if (adminUserId !== null && user?.role === 'admin') {
     page = (
       <AdminUserDetailsPage
+        key={adminUserId}
         api={api}
         userId={adminUserId}
         onBack={() => onNavigate('/admin/users')}
