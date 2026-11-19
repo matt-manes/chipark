@@ -37,6 +37,7 @@ In the Render frontend build environment, set:
 | `VITE_FARO_URL` | Grafana Cloud's Faro collection URL |
 | `VITE_FARO_API_KEY` | The public ingestion key for that Faro receiver |
 | `VITE_API_BASE_URL` | The deployed backend URL |
+| `VITE_APP_NAME` | Optional frontend application name; defaults to `chipark-frontend` |
 | `VITE_APP_VERSION` | Optional release identifier |
 
 Vite embeds `VITE_` values into the public frontend bundle. Use only a

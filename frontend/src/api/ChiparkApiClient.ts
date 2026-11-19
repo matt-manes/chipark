@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance } from 'axios'
-import { API_BASE_URL } from '../config.ts'
+import { Config } from '../config.ts'
 import type {
   AdminUser,
   AuthenticatedUser,
@@ -17,7 +17,7 @@ export class ChiparkApiClient {
   private readonly client: AxiosInstance
   private accessToken: string | null = null
 
-  constructor (baseUrl: string = API_BASE_URL) {
+  constructor (baseUrl: string = Config.API_BASE_URL) {
     this.client = axios.create({ baseURL: baseUrl })
     this.client.interceptors.request.use(config => {
       if (this.accessToken !== null) {

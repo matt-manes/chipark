@@ -1,26 +1,20 @@
 import { getWebInstrumentations, initializeFaro } from '@grafana/faro-web-sdk'
 import { TracingInstrumentation } from '@grafana/faro-web-tracing'
 import { ReplayInstrumentation } from '@grafana/faro-instrumentation-replay'
-import { API_BASE_URL } from './config'
-import {
-  BrowserTelemetryConfig,
-  type BrowserTelemetrySettings
-} from './telemetryConfig'
+import { Config } from './config'
+import { BrowserTelemetryConfig } from './telemetryConfig'
 
 export class BrowserTelemetry {
   static initialize (): void {
-    const settings: BrowserTelemetrySettings = {
-      collectorUrl: import.meta.env?.VITE_FARO_URL,
-      publicApiKey: import.meta.env?.VITE_FARO_API_KEY
-    }
+    const settings = Config.browserTelemetrySettings
     if (!BrowserTelemetryConfig.isConfigured(settings)) return
 
     initializeFaro({
       url: settings.collectorUrl,
       apiKey: settings.publicApiKey,
       app: {
-        name: 'chipark-frontend',
-        version: import.meta.env.VITE_APP_VERSION ?? 'development'
+        name: Config.APP_NAME,
+        version: Config.APP_VERSION
       },
       instrumentations: [
         ...getWebInstrumentations({ captureConsole: true }),
@@ -28,7 +22,7 @@ export class BrowserTelemetry {
           instrumentationOptions: {
             propagateTraceHeaderCorsUrls: [
               BrowserTelemetryConfig.getApiOriginPattern(
-                API_BASE_URL,
+                Config.API_BASE_URL,
                 window.location.origin
               )
             ]
