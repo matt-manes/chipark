@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from ..models.ticket import TicketStatus
@@ -38,6 +38,9 @@ class UserRecord(Base):
     )
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole, native_enum=False), nullable=False, default=UserRole.USER
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
     )
 
 

@@ -8,7 +8,7 @@ from urllib.parse import SplitResult, urlsplit
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
-from ..models.user import AuthenticatedUser, User, UserCredentials
+from ..models.user import AuthenticatedUser, User, UserCredentials, UserRole
 from ..repositories.auth_repository import AuthRepository
 from ..tools.config import Config
 from .auth_errors import AuthenticationError
@@ -196,7 +196,11 @@ class AuthService:
             else credentials.password_hash
         )
         password_matches: bool = self._password_hasher.verify(password, stored_hash)
-        if credentials is None or not password_matches:
+        if (
+            credentials is None
+            or not password_matches
+            or not credentials.user.is_active
+        ):
             raise AuthenticationError("Email or password is incorrect.")
         return self._issue_token(credentials.user)
 
@@ -248,6 +252,25 @@ class AuthService:
             Opaque bearer token to revoke.
         """
         self._repository.revoke_access_token(self._hash_token(token), self._utc_now())
+
+    def get_users(self) -> list[User]:
+        """Return all user accounts for administrator management."""
+        return self._repository.get_all_users()
+
+    def get_user(self, user_id: int) -> User:
+        """Return one account or raise when the identifier is unknown."""
+        user: User | None = self._repository.get_user(user_id)
+        if user is None:
+            raise LookupError(f"User {user_id} was not found")
+        return user
+
+    def update_user_role(self, user_id: int, role: UserRole) -> User:
+        """Change an account's role."""
+        return self._repository.update_user_role(user_id, role)
+
+    def set_user_active(self, user_id: int, is_active: bool) -> User:
+        """Enable or disable an account and revoke its tokens if disabled."""
+        return self._repository.set_user_active(user_id, is_active, self._utc_now())
 
     def update_profile(
         self,
@@ -425,6 +448,8 @@ class AuthService:
                 ) from error
             except ValueError as error:
                 raise AuthenticationError(str(error)) from error
+        if not user.is_active:
+            raise AuthenticationError("This account is disabled.")
         return self._issue_token(user)
 
     @staticmethod

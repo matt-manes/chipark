@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from ..models.user import User, UserCredentials, UserRole
@@ -107,6 +107,58 @@ class AuthRepository:
                 google_subject=record.google_subject,
             )
 
+    def get_user(self, user_id: int) -> User | None:
+        """Retrieve a public account by identifier."""
+        with self._session_factory() as session:
+            record: UserRecord | None = session.get(UserRecord, user_id)
+            return None if record is None else self._to_user(record)
+
+    def get_all_users(self) -> list[User]:
+        """Retrieve public accounts ordered by their identifiers."""
+        with self._session_factory() as session:
+            records: list[UserRecord] = list(
+                session.scalars(select(UserRecord).order_by(UserRecord.user_id)).all()
+            )
+            return [self._to_user(record) for record in records]
+
+    def get_random_user_id(self) -> int | None:
+        """Return a randomly selected account identifier, or ``None`` if empty."""
+        with self._session_factory() as session:
+            return session.scalar(
+                select(UserRecord.user_id).order_by(func.random()).limit(1)
+            )
+
+    def update_user_role(self, user_id: int, role: UserRole) -> User:
+        """Set an account's role."""
+        with self._session_factory.begin() as session:
+            record: UserRecord | None = session.get(UserRecord, user_id)
+            if record is None:
+                raise LookupError(f"User {user_id} was not found")
+            record.role = role
+            session.flush()
+            return self._to_user(record)
+
+    def set_user_active(
+        self, user_id: int, is_active: bool, revoked_at: datetime
+    ) -> User:
+        """Enable or disable an account, revoking its active tokens when disabled."""
+        with self._session_factory.begin() as session:
+            record: UserRecord | None = session.get(UserRecord, user_id)
+            if record is None:
+                raise LookupError(f"User {user_id} was not found")
+            record.is_active = is_active
+            if not is_active:
+                session.execute(
+                    update(AccessTokenRecord)
+                    .where(
+                        AccessTokenRecord.user_id == user_id,
+                        AccessTokenRecord.revoked_at.is_(None),
+                    )
+                    .values(revoked_at=revoked_at)
+                )
+            session.flush()
+            return self._to_user(record)
+
     def update_profile(
         self, user_id: int, email: str | None, password_hash: str | None
     ) -> User:
@@ -198,6 +250,8 @@ class AuthRepository:
                     "This email is already linked to another Google account."
                 )
             else:
+                if not record.is_active:
+                    raise ValueError("This account is disabled.")
                 record.google_subject = google_subject
             session.flush()
             return self._to_user(record)
@@ -300,6 +354,7 @@ class AuthRepository:
                     AccessTokenRecord.token_hash == token_hash,
                     AccessTokenRecord.revoked_at.is_(None),
                     AccessTokenRecord.expires_at > now,
+                    UserRecord.is_active.is_(True),
                 )
             )
             return None if record is None else self._to_user(record)
@@ -389,4 +444,5 @@ class AuthRepository:
             role=record.role,
             password_login_enabled=record.password_hash is not None,
             google_login_enabled=record.google_subject is not None,
+            is_active=record.is_active,
         )

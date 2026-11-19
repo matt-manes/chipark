@@ -1,4 +1,4 @@
-import type { Park, Ticket, TicketStatus } from '../api/types'
+import type { AdminUser, Park, Ticket, TicketStatus } from '../api/types'
 
 export type ParkSortField = 'name' | 'ward' | 'zip_code' | 'acres'
 export type TicketSortField =
@@ -6,6 +6,7 @@ export type TicketSortField =
   | 'park_name'
   | 'file_date'
   | 'estimated_hours'
+export type AdminUserSortField = 'email' | 'role' | 'is_active'
 
 export interface ParkFilters {
   search: string
@@ -119,5 +120,32 @@ export class TicketCatalog {
     if (left === null) return 1
     if (right === null) return -1
     return left - right
+  }
+}
+
+export class AdminUserCatalog {
+  static filterAndSort(
+    users: AdminUser[],
+    search: string,
+    sortBy: AdminUserSortField,
+    reverse: boolean
+  ): AdminUser[] {
+    const normalizedSearch: string = search.trim().toLocaleLowerCase()
+    return users
+      .filter(user =>
+        normalizedSearch === '' ||
+        [user.email, user.role].some(value =>
+          value.toLocaleLowerCase().includes(normalizedSearch)
+        )
+      )
+      .sort((left, right) => {
+        const result: number =
+          sortBy === 'is_active'
+            ? Number(left.is_active) - Number(right.is_active)
+            : String(left[sortBy]).localeCompare(String(right[sortBy]), undefined, {
+                sensitivity: 'base'
+              })
+        return reverse ? -result : result
+      })
   }
 }

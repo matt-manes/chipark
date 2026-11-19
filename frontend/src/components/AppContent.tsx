@@ -5,6 +5,8 @@ import type { RouteState } from '../navigation/BrowserRoute'
 import { RouteParameters } from '../navigation/BrowserRoute'
 import AccountAccessPage from '../pages/AccountAccessPage'
 import EditTicketPage from '../pages/EditTicketPage'
+import AdminUserDetailsPage from '../pages/AdminUserDetailsPage'
+import AdminUsersPage from '../pages/AdminUsersPage'
 import ParkDetailsPage from '../pages/ParkDetailsPage'
 import ParksPage from '../pages/ParksPage'
 import ProfilePage from '../pages/ProfilePage'
@@ -42,6 +44,12 @@ export default function AppContent({
     route.pathname,
     /^\/tickets\/(\d+)\/edit$/
   )
+  const adminUserId: number | null = RouteParameters.getIdFromPath(
+    route.pathname,
+    /^\/admin\/users\/(\d+)$/
+  )
+  const isAdminUsersRoute: boolean =
+    route.pathname === '/admin/users' || adminUserId !== null
   const requestedParkValue: string | null = query.get('parkId')
   const requestedParkId: number | null =
     requestedParkValue === null ? null : Number(requestedParkValue)
@@ -49,6 +57,7 @@ export default function AppContent({
   const loginRequiredPath: string | null =
     route.pathname === '/tickets/new' ||
     route.pathname === '/profile' ||
+    isAdminUsersRoute ||
     isEditRoute
       ? `${route.pathname}${route.search}`
       : null
@@ -79,6 +88,17 @@ export default function AppContent({
         </div>
         <button type="button" onClick={() => onNavigate('/tickets')}>
           Browse tickets
+        </button>
+      </section>
+    )
+  } else if (isAdminUsersRoute && user?.role !== 'admin') {
+    page = (
+      <section className="page-section">
+        <div className="alert alert-error" role="alert">
+          Only administrators can manage registered users.
+        </div>
+        <button type="button" onClick={() => onNavigate('/parks')}>
+          Browse parks
         </button>
       </section>
     )
@@ -158,6 +178,23 @@ export default function AppContent({
         ticketId={editTicketId}
         onBack={() => onNavigate('/tickets')}
         onSaved={() => onNavigate('/tickets')}
+      />
+    )
+  } else if (adminUserId !== null && user?.role === 'admin') {
+    page = (
+      <AdminUserDetailsPage
+        api={api}
+        userId={adminUserId}
+        onBack={() => onNavigate('/admin/users')}
+        onParkName={onParkName}
+        onEditTicket={id => onNavigate(`/tickets/${id}/edit`)}
+      />
+    )
+  } else if (route.pathname === '/admin/users' && user?.role === 'admin') {
+    page = (
+      <AdminUsersPage
+        api={api}
+        onSelectUser={id => onNavigate(`/admin/users/${id}`)}
       />
     )
   } else if (route.pathname === '/tickets') {

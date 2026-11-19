@@ -1,3 +1,5 @@
+from rich.progress import track
+
 from backend.repositories import Database
 
 from ..models.park import Park
@@ -32,9 +34,9 @@ class ParkDatabasePopulator:
         """
         try:
             parks: list[Park] = load_from_geojson()
-            self._data_service.add_parks(
-                [park for park in parks if park.park_no not in self._park_nos]
-            )
+            for park in track(parks, "Populating parks..."):
+                if park.park_no not in self._park_nos:
+                    self._data_service.add_park(park)
             return len(self._data_service.get_parks()) - self._starting_count
         finally:
             self._database.close()

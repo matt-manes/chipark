@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { ParkCatalog, TicketCatalog } from '../src/utils/catalog.ts'
-import type { Park, Ticket } from '../src/api/types.ts'
+import {
+  AdminUserCatalog,
+  ParkCatalog,
+  TicketCatalog
+} from '../src/utils/catalog.ts'
+import type { AdminUser, Park, Ticket } from '../src/api/types.ts'
 
 const parks: Park[] = [
   {
@@ -94,4 +98,21 @@ test('ticket catalog searches issue text and filters status', () => {
   })
 
   assert.deepEqual(result.map(ticket => ticket.ticket_id), [2])
+})
+
+const users: AdminUser[] = [
+  { user_id: 1, email: 'zara@example.com', role: 'user', is_active: true },
+  { user_id: 2, email: 'alex@example.com', role: 'admin', is_active: false }
+]
+
+test('admin user catalog searches email and role', () => {
+  const result = AdminUserCatalog.filterAndSort(users, 'admin', 'email', false)
+
+  assert.deepEqual(result.map(user => user.user_id), [2])
+})
+
+test('admin user catalog sorts and reverses account status', () => {
+  const result = AdminUserCatalog.filterAndSort(users, '', 'is_active', true)
+
+  assert.deepEqual(result.map(user => user.user_id), [1, 2])
 })

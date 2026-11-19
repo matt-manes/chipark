@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.applications import Starlette
 
 from backend.repositories import Database, DatabaseFactory
+from backend.routers.admin_users import router as admin_users_router
 from backend.routers.auth import router as auth_router
 from backend.routers.notifications import router as notifications_router
 from backend.routers.parks import router as parks_router
@@ -66,6 +67,7 @@ app.add_middleware(
 )
 mcp_mount: McpAsgiApp = McpAsgiApp()
 app.include_router(auth_router)
+app.include_router(admin_users_router)
 app.include_router(notifications_router)
 app.include_router(parks_router)
 app.include_router(tickets_router)

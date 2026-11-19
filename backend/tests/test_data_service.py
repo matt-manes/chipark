@@ -92,6 +92,20 @@ def test_add_and_get_ticket(
     assert data_service.get_ticket(saved_ticket.ticket_id) == saved_ticket
 
 
+def test_get_random_user_id_returns_database_user(
+    database: Database, sample_user: User
+) -> None:
+    data_service: DataService = DataService(database)
+
+    assert data_service.get_random_user_id() == sample_user.user_id
+
+
+def test_get_random_user_id_returns_none_without_users(database: Database) -> None:
+    data_service: DataService = DataService(database)
+
+    assert data_service.get_random_user_id() is None
+
+
 def test_get_tickets(
     database: Database, sample_park: Park, sample_ticket: Ticket
 ) -> None:

@@ -11,6 +11,14 @@ export interface User {
   role: UserRole
   password_login_enabled: boolean
   google_login_enabled: boolean
+  is_active: boolean
+}
+
+export interface AdminUser {
+  user_id: number
+  email: string
+  role: UserRole
+  is_active: boolean
 }
 
 export interface AuthenticatedUser {

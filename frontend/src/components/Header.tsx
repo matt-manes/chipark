@@ -90,6 +90,9 @@ export default function Header({
         {user !== null && (
           <button type="button" onClick={() => onNavigate('/profile')}>Profile</button>
         )}
+        {user?.role === 'admin' && (
+          <button type="button" onClick={() => onNavigate('/admin/users')}>Users</button>
+        )}
       </nav>
       <div className="account-actions">
         {user !== null && (

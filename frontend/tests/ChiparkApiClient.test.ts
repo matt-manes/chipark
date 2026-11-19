@@ -116,7 +116,8 @@ class ApiTestServer {
           email: 'member@example.com',
           role: 'user',
           password_login_enabled: true,
-          google_login_enabled: false
+          google_login_enabled: false,
+          is_active: true
         }
       }
     }
@@ -126,7 +127,8 @@ class ApiTestServer {
         email: 'member@example.com',
         role: 'user',
         password_login_enabled: true,
-        google_login_enabled: false
+        google_login_enabled: false,
+        is_active: true
       }
     }
     if (path.endsWith('/conditions')) return null
@@ -280,5 +282,35 @@ test('notification history methods load the inbox and mark an item read', async 
     )
     assert.equal(server.requests[0].authorization, 'Bearer inbox-token')
     assert.equal(server.requests[1].authorization, 'Bearer inbox-token')
+  })
+})
+
+test('admin user methods use user management endpoints', async () => {
+  await withApiServer(async (api, server) => {
+    api.setAccessToken('admin-token')
+    await api.getAdminUsers()
+    await api.getAdminUser(8)
+    await api.getTicketsForUser(8)
+    await api.updateUserRole(8, 'admin')
+    await api.setUserActive(8, false)
+
+    assert.deepEqual(
+      server.requests.map(request => [request.method, request.path]),
+      [
+        ['GET', '/admin/users'],
+        ['GET', '/admin/users/8'],
+        ['GET', '/admin/users/8/tickets'],
+        ['PATCH', '/admin/users/8/role'],
+        ['PATCH', '/admin/users/8/status']
+      ]
+    )
+    assert.equal(server.requests[3].body, JSON.stringify({ role: 'admin' }))
+    assert.equal(server.requests[4].body, JSON.stringify({ is_active: false }))
+    assert.equal(
+      server.requests.every(
+        request => request.authorization === 'Bearer admin-token'
+      ),
+      true
+    )
   })
 })

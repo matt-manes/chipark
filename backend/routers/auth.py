@@ -140,6 +140,7 @@ def get_current_user(
         role=user.role,
         password_login_enabled=user.password_login_enabled,
         google_login_enabled=user.google_login_enabled,
+        is_active=user.is_active,
     )
 
 
@@ -185,6 +186,7 @@ def update_current_user(
         role=updated_user.role,
         password_login_enabled=updated_user.password_login_enabled,
         google_login_enabled=updated_user.google_login_enabled,
+        is_active=updated_user.is_active,
     )
 
 

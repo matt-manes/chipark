@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance } from 'axios'
 import type {
+  AdminUser,
   AuthenticatedUser,
   Conditions,
   Park,
@@ -67,6 +68,45 @@ export class ChiparkApiClient {
 
   async updateProfile (changes: ProfileUpdate): Promise<User> {
     const response = await this.client.patch<User>('/auth/me', changes)
+    return response.data
+  }
+
+  async getAdminUsers (signal?: AbortSignal): Promise<AdminUser[]> {
+    const response = await this.client.get<AdminUser[]>('/admin/users', { signal })
+    return response.data
+  }
+
+  async getAdminUser (userId: number, signal?: AbortSignal): Promise<AdminUser> {
+    const response = await this.client.get<AdminUser>(`/admin/users/${userId}`, {
+      signal
+    })
+    return response.data
+  }
+
+  async getTicketsForUser (
+    userId: number,
+    signal?: AbortSignal
+  ): Promise<Ticket[]> {
+    const response = await this.client.get<Ticket[]>(
+      `/admin/users/${userId}/tickets`,
+      { signal }
+    )
+    return response.data
+  }
+
+  async updateUserRole (userId: number, role: User['role']): Promise<AdminUser> {
+    const response = await this.client.patch<AdminUser>(
+      `/admin/users/${userId}/role`,
+      { role }
+    )
+    return response.data
+  }
+
+  async setUserActive (userId: number, isActive: boolean): Promise<AdminUser> {
+    const response = await this.client.patch<AdminUser>(
+      `/admin/users/${userId}/status`,
+      { is_active: isActive }
+    )
     return response.data
   }
 

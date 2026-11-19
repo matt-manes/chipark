@@ -434,6 +434,10 @@ main {
   grid-template-columns: minmax(15rem, 2fr) repeat(2, minmax(9rem, 1fr)) auto;
 }
 
+.user-filters {
+  grid-template-columns: minmax(15rem, 2fr) minmax(9rem, 1fr) auto;
+}
+
 label {
   display: flex;
   position: relative;

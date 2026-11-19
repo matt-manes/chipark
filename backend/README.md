@@ -16,8 +16,14 @@ cd backend
 uv sync
 cd ..
 uv run --project backend python -m backend.scripts.populate_parks
+uv run --project backend python -m backend.scripts.populate_users
 uv run --project backend python -m backend.scripts.populate_tickets
 ```
+
+`populate_users` registers the synthetic accounts from
+`backend/data/sample-users.json` and writes their generated credentials to the
+git-ignored `backend/data/registered-sample-users.json`. Run it before
+`populate_tickets`; imported synthetic tickets are assigned random user IDs.
 
 From the repo root a default .env file can be generated with `uv run --project backend python -m backend.scripts.new_env`.  
 The new file will have all the env vars currently used by the project.  
@@ -76,6 +82,7 @@ Authenticated users can update password-based account details with
 Google. `GET /tickets/mine` returns the current user's submitted tickets.
 Administrators can reopen tickets with `PATCH /tickets/{ticket_id}/reopen`,
 and `GET /tickets/parks/{park_id}/open` returns a park's open tickets.
+Administrators can view and manage accounts through `/admin/users`.
 
 To use PostgreSQL, set `CHIPARK_DATABASE` to `postgresql`, configure
 `CHIPARK_PG_URL` with the SQLAlchemy URL excluding credentials, and provide

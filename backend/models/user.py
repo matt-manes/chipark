@@ -37,6 +37,8 @@ class User:
         Whether the account has a password credential.
     google_login_enabled : bool, default=False
         Whether the account is linked to Google OAuth.
+    is_active : bool, default=True
+        Whether the account is enabled to authenticate.
     """
 
     user_id: int
@@ -44,6 +46,7 @@ class User:
     role: UserRole
     password_login_enabled: bool = False
     google_login_enabled: bool = False
+    is_active: bool = True
 
 
 @dataclass
@@ -129,6 +132,8 @@ class UserResponse(BaseModel):
         Whether the account has a password credential.
     google_login_enabled : bool
         Whether the account is linked to Google OAuth.
+    is_active : bool
+        Whether the account is enabled.
     """
 
     user_id: int
@@ -136,6 +141,28 @@ class UserResponse(BaseModel):
     role: UserRole
     password_login_enabled: bool = False
     google_login_enabled: bool = False
+    is_active: bool = True
+
+
+class AdminUserResponse(BaseModel):
+    """Expose the limited account details available to administrators."""
+
+    user_id: int
+    email: EmailStr
+    role: UserRole
+    is_active: bool
+
+
+class UserRoleUpdate(BaseModel):
+    """Validate an administrator's requested role change."""
+
+    role: UserRole
+
+
+class UserStatusUpdate(BaseModel):
+    """Validate an administrator's requested account status change."""
+
+    is_active: bool
 
 
 class ProfileUpdateRequest(BaseModel):
@@ -201,5 +228,6 @@ class AuthenticatedUserResponse(BaseModel):
                 role=user.role,
                 password_login_enabled=user.password_login_enabled,
                 google_login_enabled=user.google_login_enabled,
+                is_active=user.is_active,
             ),
         )

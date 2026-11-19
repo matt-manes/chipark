@@ -3,7 +3,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
-from backend.models.user import AuthenticatedUser, UserRole
+from backend.models.user import AuthenticatedUser, User, UserRole
 from backend.repositories.database import Database
 from backend.services import google_oauth
 from backend.services.auth_service import AuthenticationError, AuthService
@@ -60,6 +60,45 @@ def test_logout_revokes_the_access_token(auth_service: AuthService) -> None:
     assert auth_service.authenticate_token(authenticated_user.access_token) is None
 
 
+def test_disabling_user_revokes_tokens_and_blocks_login(
+    auth_service: AuthService,
+) -> None:
+    authenticated_user: AuthenticatedUser = auth_service.register(
+        "member@example.com", "a-secure-user-password"
+    )
+
+    auth_service.set_user_active(authenticated_user.user.user_id, False)
+
+    assert auth_service.authenticate_token(authenticated_user.access_token) is None
+    with pytest.raises(AuthenticationError, match="incorrect"):
+        auth_service.login("member@example.com", "a-secure-user-password")
+
+
+def test_reenabling_user_allows_login(auth_service: AuthService) -> None:
+    authenticated_user: AuthenticatedUser = auth_service.register(
+        "member@example.com", "a-secure-user-password"
+    )
+    auth_service.set_user_active(authenticated_user.user.user_id, False)
+
+    auth_service.set_user_active(authenticated_user.user.user_id, True)
+
+    assert auth_service.login(
+        "member@example.com", "a-secure-user-password"
+    ).user.is_active
+
+
+def test_admin_can_change_user_role(auth_service: AuthService) -> None:
+    authenticated_user: AuthenticatedUser = auth_service.register(
+        "member@example.com", "a-secure-user-password"
+    )
+
+    administrator = auth_service.update_user_role(
+        authenticated_user.user.user_id, UserRole.ADMIN
+    )
+
+    assert administrator.role is UserRole.ADMIN
+
+
 def test_bootstrap_admin_creates_an_administrator(
     auth_service: AuthService,
 ) -> None:
@@ -69,6 +108,23 @@ def test_bootstrap_admin_creates_an_administrator(
 
     assert administrator is not None
     assert administrator.role is UserRole.ADMIN
+
+
+def test_bootstrap_admin_does_not_reenable_a_disabled_account(
+    auth_service: AuthService,
+) -> None:
+    administrator: User | None = auth_service.bootstrap_admin(
+        "admin@example.com", "a-secure-admin-password"
+    )
+    assert administrator is not None
+    auth_service.set_user_active(administrator.user_id, False)
+
+    bootstrapped_admin: User | None = auth_service.bootstrap_admin(
+        "admin@example.com", "a-secure-admin-password"
+    )
+
+    assert bootstrapped_admin is not None
+    assert bootstrapped_admin.is_active is False
 
 
 def test_bootstrap_admin_requires_credentials_on_empty_database(

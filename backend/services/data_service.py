@@ -10,6 +10,7 @@ from ..models.notification import MAX_NOTIFICATIONS_PER_REQUEST, Notification
 from ..models.park import Park
 from ..models.ticket import Ticket, TicketUpdate
 from ..repositories import (
+    AuthRepository,
     ConditionsRepository,
     Database,
     NotificationRepository,
@@ -54,6 +55,9 @@ class DataService:
             Database providing the repositories' SQLAlchemy sessions.
         """
         self._database: Database = database
+        self._auth_repository: AuthRepository = AuthRepository(
+            self._database.session_factory
+        )
         self._park_repository: ParkRepository = ParkRepository(
             self._database.session_factory
         )
@@ -330,6 +334,10 @@ class DataService:
             Persisted ticket model.
         """
         return self._ticket_repository.add(ticket)
+
+    def get_random_user_id(self) -> int | None:
+        """Return a randomly selected user ID, or ``None`` if there are no users."""
+        return self._auth_repository.get_random_user_id()
 
     def close_ticket(self, ticket_id: int) -> Ticket:
         """

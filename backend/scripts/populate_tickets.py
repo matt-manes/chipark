@@ -1,5 +1,7 @@
+from rich.progress import track
+
 from backend.repositories import Database
-from backend.tools.ticket_loader import load_from_json
+from backend.tools.ticket_loader import DEFAULT_PATH, load_from_json
 
 from ..models.ticket import Ticket
 from ..repositories.database_factory import DatabaseFactory
@@ -28,8 +30,8 @@ class TicketDatabasePopulator:
             Number of tickets inserted during this run.
         """
         try:
-            tickets: list[Ticket] = load_from_json()
-            for ticket in tickets:
+            tickets: list[Ticket] = load_from_json(self._data_service, DEFAULT_PATH)
+            for ticket in track(tickets, "Populating tickets..."):
                 self._data_service.add_ticket(ticket)
             return len(self._data_service.get_tickets()) - self._starting_count
         finally:
