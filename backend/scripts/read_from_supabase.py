@@ -22,10 +22,11 @@ def main() -> None:
     consecutive_fails: int = 0
     fail_limit: int = 5
     while "forever":
-        database: Database = DatabaseFactory.get_database("postgres")
-        data_service: DataService = DataService(database)
-        print(f"Fetching data at {datetime.now()}.")
+        database: Database | None = None
         try:
+            database = DatabaseFactory.get_database("postgres")
+            data_service: DataService = DataService(database)
+            print(f"Fetching data at {datetime.now()}.")
             print("Fetching parks")
             parks: list[Park] = data_service.get_parks()
             for _ in range(random.randint(1, 10)):
@@ -48,7 +49,8 @@ def main() -> None:
                 continue
         except Exception as e:
             print(e)
-        database.close()
+        if database:
+            database.close()
         consecutive_fails = 0
         sleep_time: int = random.randint(3600 * 6, 3600 * 12)
         print(f"Sleeping until {datetime.now() + timedelta(seconds=sleep_time)}.")
