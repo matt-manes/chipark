@@ -5,5 +5,5 @@ __pycache__
 .coverage
 *.txt
 *.env*
-*registered-sample-users.json
+*registered-sample-users*.json
 *pg.url

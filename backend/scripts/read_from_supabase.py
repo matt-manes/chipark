@@ -50,7 +50,7 @@ def main() -> None:
             print(e)
         database.close()
         consecutive_fails = 0
-        sleep_time: int = random.randint(3600, 3600 * 6)
+        sleep_time: int = random.randint(3600 * 6, 3600 * 12)
         print(f"Sleeping until {datetime.now() + timedelta(seconds=sleep_time)}.")
         time.sleep(sleep_time)
 
