@@ -92,6 +92,16 @@ class Config:
     CHIPARK_TEST_PG_URL: str | None = None
     CHIPARK_TEST_PG_USER: str | None = None
     CHIPARK_TEST_PG_PASSWORD: str | None = None
+    OTEL_SERVICE_NAME: str | None = None
+    OTEL_RESOURCE_ATTRIBUTES: str | None = None
+    OTEL_EXPORTER_OTLP_ENDPOINT: str | None = None
+    OTEL_EXPORTER_OTLP_HEADERS: str | None = None
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: str | None = None
+    OTEL_EXPORTER_OTLP_TRACES_HEADERS: str | None = None
+    OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: str | None = None
+    OTEL_EXPORTER_OTLP_METRICS_HEADERS: str | None = None
+    OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: str | None = None
+    OTEL_EXPORTER_OTLP_LOGS_HEADERS: str | None = None
 
     @property
     def cors_allow_origins(self) -> tuple[str, ...]:

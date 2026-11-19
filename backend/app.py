@@ -15,6 +15,7 @@ from backend.services.auth_service import AuthService
 from backend.services.data_service import DataService
 from backend.tools.config import Config
 from backend.tools.mcp_server import ChiparkMcpServer, McpAsgiApp
+from backend.tools.telemetry import Telemetry
 
 
 @asynccontextmanager
@@ -33,7 +34,10 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     """
     database: Database = DatabaseFactory.get_database(Config().CHIPARK_DATABASE)
     mcp_server: ChiparkMcpServer = ChiparkMcpServer()
+    database_instrumented: bool = False
     try:
+        Telemetry.instrument_database(database.engine)
+        database_instrumented = True
         data_service: DataService = DataService(database)
         auth_service: AuthService = AuthService(database.session_factory)
         config: Config = Config()
@@ -54,6 +58,8 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
         mcp_server.set_data_service(None)
         application.state.data_service = None
         application.state.auth_service = None
+        if database_instrumented:
+            Telemetry.uninstrument_database()
         database.close()
 
 
@@ -65,12 +71,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.middleware("http")(Telemetry.record_request)
 mcp_mount: McpAsgiApp = McpAsgiApp()
 app.include_router(auth_router)
 app.include_router(admin_users_router)
 app.include_router(notifications_router)
 app.include_router(parks_router)
 app.include_router(tickets_router)
+Telemetry.instrument_app(app)
 
 
 @app.get("/")

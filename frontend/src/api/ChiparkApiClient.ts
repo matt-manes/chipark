@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance } from 'axios'
+import { API_BASE_URL } from '../config.ts'
 import type {
   AdminUser,
   AuthenticatedUser,
@@ -16,7 +17,7 @@ export class ChiparkApiClient {
   private readonly client: AxiosInstance
   private accessToken: string | null = null
 
-  constructor (baseUrl: string = ChiparkApiClient.getDefaultBaseUrl()) {
+  constructor (baseUrl: string = API_BASE_URL) {
     this.client = axios.create({ baseURL: baseUrl })
     this.client.interceptors.request.use(config => {
       if (this.accessToken !== null) {
@@ -28,10 +29,6 @@ export class ChiparkApiClient {
 
   setAccessToken (token: string | null): void {
     this.accessToken = token
-  }
-
-  private static getDefaultBaseUrl (): string {
-    return import.meta.env?.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
   }
 
   getGoogleLoginUrl (): string {

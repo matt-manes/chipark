@@ -40,6 +40,15 @@ park by ID, and manage tickets. Ticket submission requires a bearer token, and
 the MCP client must send it in the `Authorization` header. Ticket editing,
 closing, and deletion require an administrator token.
 
+## Observability
+
+The backend exports OpenTelemetry traces, metrics, and structured logs over
+OTLP/HTTP when an OTLP endpoint is configured. It also writes JSON logs to
+stdout, which Render exposes in the service's Logs view. The frontend uses
+Grafana Faro for browser errors, console logs, web vitals, and traces. See
+[`../observability/README.md`](../observability/README.md) for Grafana Cloud
+setup, the availability SLI/SLO, and the alert rule.
+
 ## Accounts and authorization
 
 Set `CHIPARK_ADMIN_EMAIL` and `CHIPARK_ADMIN_PASSWORD` in the process
@@ -75,7 +84,14 @@ to `http://localhost:5173/auth/callback`, and
 `CHIPARK_PG_USER`, `CHIPARK_PG_PASS`, `CHIPARK_GOOGLE_CLIENT_ID`,
 `CHIPARK_GOOGLE_CLIENT_SECRET`, `CHIPARK_GOOGLE_REDIRECT_URI`, and
 `CHIPARK_TEST_PG_URL`, `CHIPARK_TEST_PG_USER`, and
-`CHIPARK_TEST_PG_PASSWORD`.
+`CHIPARK_TEST_PG_PASSWORD`. OpenTelemetry settings include
+`OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`,
+`OTEL_RESOURCE_ATTRIBUTES`, `OTEL_EXPORTER_OTLP_HEADERS`, and the
+corresponding signal-specific endpoint and header variables for traces,
+metrics, and logs. Set `OTEL_RESOURCE_ATTRIBUTES` to
+`deployment.environment=development` locally or
+`deployment.environment=production` in Render. The backend adds `host.name`
+from the runtime hostname unless you provide it in this variable.
 
 Authenticated users can update password-based account details with
 `PATCH /auth/me`; Google-linked accounts manage their credentials through

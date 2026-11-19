@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +26,21 @@ from backend.repositories.sqlite_database import SqliteDatabase
 from backend.repositories.ticket_repository import TicketRepository
 from backend.services.data_service import DataService
 from backend.tools.config import Config
+from backend.tools.telemetry import JsonStreamHandler
+
+
+@pytest.fixture(scope="session", autouse=True)
+def suppress_console_telemetry() -> Iterator[None]:
+    """Keep the production JSON console handler from flooding test output."""
+    root_logger: logging.Logger = logging.getLogger()
+    telemetry_handlers: list[JsonStreamHandler] = [
+        handler
+        for handler in root_logger.handlers
+        if isinstance(handler, JsonStreamHandler)
+    ]
+    for handler in telemetry_handlers:
+        root_logger.removeHandler(handler)
+    yield
 
 
 @pytest.fixture

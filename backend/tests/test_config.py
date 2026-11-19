@@ -47,6 +47,16 @@ def reset_config_singleton(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
         "CHIPARK_TEST_PG_URL",
         "CHIPARK_TEST_PG_USER",
         "CHIPARK_TEST_PG_PASSWORD",
+        "OTEL_SERVICE_NAME",
+        "OTEL_RESOURCE_ATTRIBUTES",
+        "OTEL_EXPORTER_OTLP_ENDPOINT",
+        "OTEL_EXPORTER_OTLP_HEADERS",
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+        "OTEL_EXPORTER_OTLP_TRACES_HEADERS",
+        "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+        "OTEL_EXPORTER_OTLP_METRICS_HEADERS",
+        "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
+        "OTEL_EXPORTER_OTLP_LOGS_HEADERS",
         "enabled",
         "options",
     ):
@@ -130,7 +140,11 @@ def test_loads_optional_settings_from_dotenv(
         "CHIPARK_ADMIN_EMAIL=admin@example.com\n"
         "CHIPARK_GOOGLE_CLIENT_ID=google-client\n"
         "CHIPARK_TEST_PG_USER=test-user\n"
-        "CHIPARK_TEST_PG_PASSWORD=test-password\n",
+        "CHIPARK_TEST_PG_PASSWORD=test-password\n"
+        "OTEL_SERVICE_NAME=chipark-test\n"
+        "OTEL_RESOURCE_ATTRIBUTES=deployment.environment=test\n"
+        "OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.example.com\n"
+        "OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer test-token\n",
         encoding="utf-8",
     )
     monkeypatch.setattr(config_module, "DOTENV_PATH", dotenv_path)
@@ -142,6 +156,10 @@ def test_loads_optional_settings_from_dotenv(
     assert config.CHIPARK_TEST_PG_USER == "test-user"
     assert config.CHIPARK_TEST_PG_PASSWORD == "test-password"
     assert config.CHIPARK_ADMIN_PASSWORD is None
+    assert config.OTEL_SERVICE_NAME == "chipark-test"
+    assert config.OTEL_RESOURCE_ATTRIBUTES == "deployment.environment=test"
+    assert config.OTEL_EXPORTER_OTLP_ENDPOINT == "https://otlp.example.com"
+    assert config.OTEL_EXPORTER_OTLP_HEADERS == "Authorization=Bearer test-token"
 
 
 def test_reuses_singleton_without_reloading(
