@@ -18,6 +18,7 @@ class EnvironmentFileGenerator:
             "CHIPARK_DATABASE": "sqlite",
             "CHIPARK_CONDITIONS_TTL": 900,
             "CHIPARK_CORS_ALLOW_LIST": "http://localhost:5173",
+            "CHIPARK_ENABLE_DOCS": "true",
             "CHIPARK_RATE_LIMIT_AUTH": "5/minute",
             "CHIPARK_RATE_LIMIT_GLOBAL": "60/minute",
         }

@@ -60,6 +60,10 @@ setup, the availability SLI/SLO, and the alert rule.
 
 ## Accounts and authorization
 
+API documentation is enabled by default. Set `CHIPARK_ENABLE_DOCS=false` in
+the process environment or `backend/.env` and restart the backend to disable
+`/docs`, `/redoc`, and `/openapi.json`.
+
 Set `CHIPARK_ADMIN_EMAIL` and `CHIPARK_ADMIN_PASSWORD` in the process
 environment or `backend/.env` before starting the API. Values in `backend/.env`
 override values from the process environment.

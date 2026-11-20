@@ -72,7 +72,32 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
         database.close()
 
 
-app: FastAPI = FastAPI(lifespan=lifespan)
+class ApplicationFactory:
+    """Create the FastAPI application with configurable documentation."""
+
+    @staticmethod
+    def create(docs_enabled: bool) -> FastAPI:
+        """Create the application with its documentation routes configured.
+
+        Parameters
+        ----------
+        docs_enabled : bool
+            Whether to expose the documentation and OpenAPI schema.
+
+        Returns
+        -------
+        FastAPI
+            Application with documentation routes configured.
+        """
+        return FastAPI(
+            lifespan=lifespan,
+            docs_url="/docs" if docs_enabled else None,
+            redoc_url="/redoc" if docs_enabled else None,
+            openapi_url="/openapi.json" if docs_enabled else None,
+        )
+
+
+app: FastAPI = ApplicationFactory.create(Config().CHIPARK_ENABLE_DOCS)
 rate_limit_coordinator: IpRateLimitCoordinator = IpRateLimitCoordinator(
     auth_policy=Config().CHIPARK_RATE_LIMIT_AUTH,
     global_policy=Config().CHIPARK_RATE_LIMIT_GLOBAL,

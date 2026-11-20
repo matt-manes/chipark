@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from backend.scripts import new_env
 from backend.tools import config as config_module
 from backend.tools.config import Config, ConfigError, EnvValueParser
 
@@ -36,6 +37,7 @@ def reset_config_singleton(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
         "CHIPARK_CORS_ALLOW_LIST",
         "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL",
         "CHIPARK_PG_URL",
+        "CHIPARK_ENABLE_DOCS",
         "CHIPARK_RATE_LIMIT_AUTH",
         "CHIPARK_RATE_LIMIT_GLOBAL",
         "CHIPARK_ADMIN_EMAIL",
@@ -74,6 +76,27 @@ def test_raises_when_required_settings_are_missing(
 
     with pytest.raises(ConfigError, match="CHIPARK_DATABASE.*missing"):
         Config()
+
+
+def test_docs_are_enabled_by_default() -> None:
+    assert Config().CHIPARK_ENABLE_DOCS is True
+
+
+def test_docs_can_be_disabled_in_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CHIPARK_ENABLE_DOCS", "false")
+
+    assert Config().CHIPARK_ENABLE_DOCS is False
+
+
+def test_generated_environment_enables_docs(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    dotenv_path: Path = tmp_path / "generated.env"
+    monkeypatch.setattr(new_env, "DOTENV_PATH", dotenv_path)
+
+    new_env.EnvironmentFileGenerator().generate()
+
+    assert "CHIPARK_ENABLE_DOCS=true\n" in dotenv_path.read_text(encoding="utf-8")
 
 
 def test_environment_values_are_used_when_dotenv_keys_are_absent(
