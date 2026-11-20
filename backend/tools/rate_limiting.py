@@ -8,8 +8,7 @@ from typing import ClassVar
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.base import RequestResponseEndpoint
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
 
 
@@ -187,15 +186,15 @@ class IpRateLimitCoordinator:
             Rejection decision when a limit is exceeded, otherwise ``None``.
         """
         with self._lock:
-            global_decision: RateLimitDecision = (
-                self._global_store.acquire_decision(client_ip)
+            global_decision: RateLimitDecision = self._global_store.acquire_decision(
+                client_ip
             )
             if not global_decision.allowed:
                 return global_decision
 
             if is_authentication_request:
-                auth_decision: RateLimitDecision = (
-                    self._auth_store.acquire_decision(client_ip)
+                auth_decision: RateLimitDecision = self._auth_store.acquire_decision(
+                    client_ip
                 )
                 if not auth_decision.allowed:
                     return auth_decision

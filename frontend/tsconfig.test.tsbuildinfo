@@ -1,1 +1,1 @@
-{"root":["./tests/chiparkapiclient.test.ts","./tests/catalog.test.ts"],"version":"6.0.3"}
+{"root":["./tests/chiparkapiclient.test.ts","./tests/catalog.test.ts","./tests/config.test.ts","./tests/telemetryconfig.test.ts"],"version":"6.0.3"}

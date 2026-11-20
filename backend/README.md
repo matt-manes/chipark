@@ -40,6 +40,10 @@ park by ID, and manage tickets. Ticket submission requires a bearer token, and
 the MCP client must send it in the `Authorization` header. Ticket editing,
 closing, and deletion require an administrator token.
 
+The MCP App explorer is bundled by `npm run build` in `frontend`. The backend
+serves `frontend/dist/mcp-app/mcp-app.html` through the `ui://chipark/explorer.html`
+resource, so deployments must build the frontend bundle before starting the API.
+
 ## Observability
 
 The backend exports OpenTelemetry traces, metrics, and structured logs over

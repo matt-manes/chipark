@@ -1,6 +1,7 @@
 from dataclasses import asdict
 from datetime import datetime
 from html import escape
+from pathlib import Path
 from typing import ClassVar
 
 from mcp.server import MCPServer
@@ -63,6 +64,14 @@ class McpAsgiApp:
 class ChiparkMcpServer:
     """Expose park and ticket operations through the Model Context Protocol."""
 
+    PARKS_APP_RESOURCE_URI: ClassVar[str] = "ui://chipark/explorer.html"
+    PARKS_APP_BUNDLE_PATH: ClassVar[Path] = (
+        Path(__file__).resolve().parents[2]
+        / "frontend"
+        / "dist"
+        / "mcp-app"
+        / "mcp-app.html"
+    )
     TOOL_DESCRIPTIONS: ClassVar[dict[str, str]] = {
         "list_tools": "List the tools available on the Chipark MCP server.",
         "list_parks": "List all parks.",
@@ -84,13 +93,24 @@ class ChiparkMcpServer:
         self._data_service: DataService | None = None
         self._server: MCPServer = MCPServer("Chipark")
         self._server.tool()(self.list_tools)
-        self._server.tool()(self.list_parks)
-        self._server.tool()(self.list_tickets)
+        self._server.tool(meta={"ui": {"resourceUri": self.PARKS_APP_RESOURCE_URI}})(
+            self.list_parks
+        )
+        self._server.tool(meta={"ui": {"resourceUri": self.PARKS_APP_RESOURCE_URI}})(
+            self.list_tickets
+        )
         self._server.tool()(self.get_park)
         self._server.tool()(self.submit_ticket)
         self._server.tool()(self.close_ticket)
         self._server.tool()(self.edit_ticket)
         self._server.tool()(self.delete_ticket)
+        self._server.resource(
+            self.PARKS_APP_RESOURCE_URI,
+            name="chipark-explorer",
+            description="Interactive Chipark parks and tickets explorer.",
+            mime_type="text/html;profile=mcp-app",
+            meta={"ui": {"prefersBorder": True}},
+        )(self._read_parks_app)
 
     def asgi_app(self) -> Starlette:
         """
@@ -124,6 +144,28 @@ class ChiparkMcpServer:
             Active service, or ``None`` while the application is stopped.
         """
         self._data_service = data_service
+
+    def _read_parks_app(self) -> str:
+        """
+        Read the bundled React MCP App resource.
+
+        Returns
+        -------
+        str
+            Self-contained HTML for the Chipark MCP App.
+
+        Raises
+        ------
+        RuntimeError
+            If the frontend MCP App bundle has not been built.
+        """
+        try:
+            return self.PARKS_APP_BUNDLE_PATH.read_text(encoding="utf-8")
+        except FileNotFoundError as error:
+            raise RuntimeError(
+                "The Chipark MCP App bundle is missing. Build the frontend "
+                "MCP App before starting the MCP server."
+            ) from error
 
     def list_tools(self) -> list[dict[str, str]]:
         """
