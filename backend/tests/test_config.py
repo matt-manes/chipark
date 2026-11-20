@@ -36,6 +36,8 @@ def reset_config_singleton(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
         "CHIPARK_CORS_ALLOW_LIST",
         "CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL",
         "CHIPARK_PG_URL",
+        "CHIPARK_RATE_LIMIT_AUTH",
+        "CHIPARK_RATE_LIMIT_GLOBAL",
         "CHIPARK_ADMIN_EMAIL",
         "CHIPARK_ADMIN_PASSWORD",
         "CHIPARK_WEATHERAPI_KEY",

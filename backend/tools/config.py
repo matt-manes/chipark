@@ -81,6 +81,8 @@ class Config:
     CHIPARK_CORS_ALLOW_LIST: str
     CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL: str
     CHIPARK_PG_URL: str
+    CHIPARK_RATE_LIMIT_AUTH: str = "5/minute"
+    CHIPARK_RATE_LIMIT_GLOBAL: str = "60/minute"
     CHIPARK_ADMIN_EMAIL: str | None = None
     CHIPARK_ADMIN_PASSWORD: str | None = None
     CHIPARK_WEATHERAPI_KEY: str | None = None

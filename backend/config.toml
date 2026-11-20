@@ -1,5 +1,0 @@
-CHIPARK_DATABASE="postgresql"
-CHIPARK_CONDITIONS_TTL=900
-CHIPARK_CORS_ALLOW_LIST="http://localhost:5173"
-CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL="http://localhost:5173/auth/callback"
-CHIPARK_PG_URL="postgresql+psycopg2://localhost:5432/chipark"

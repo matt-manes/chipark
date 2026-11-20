@@ -10,7 +10,7 @@ from httpx2 import Response
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, make_url
 
-from backend.app import app
+from backend.app import app, rate_limit_coordinator
 from backend.models.conditions import Conditions
 from backend.models.park import Park
 from backend.models.ticket import Ticket, TicketStatus
@@ -267,6 +267,13 @@ def api_client(
     database: Database,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[TestClient]:
+    def bypass_rate_limit(
+        _client_ip: str,
+        _is_authentication_request: bool,
+    ) -> None:
+        """Disable request throttling for tests of unrelated API behavior."""
+
+    monkeypatch.setattr(rate_limit_coordinator, "acquire_decision", bypass_rate_limit)
     monkeypatch.setattr(
         DatabaseFactory,
         "get_database",

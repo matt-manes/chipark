@@ -15,6 +15,10 @@ from backend.services.auth_service import AuthService
 from backend.services.data_service import DataService
 from backend.tools.config import Config
 from backend.tools.mcp_server import ChiparkMcpServer, McpAsgiApp
+from backend.tools.rate_limiting import (
+    IpRateLimitCoordinator,
+    IpRateLimitMiddleware,
+)
 from backend.tools.telemetry import Telemetry
 
 
@@ -34,6 +38,7 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     """
     database: Database = DatabaseFactory.get_database(Config().CHIPARK_DATABASE)
     mcp_server: ChiparkMcpServer = ChiparkMcpServer()
+    cleanup_tasks_started: bool = False
     database_instrumented: bool = False
     try:
         Telemetry.instrument_database(database.engine)
@@ -51,9 +56,13 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
         mcp_application: Starlette = mcp_server.asgi_app()
         mcp_application.state.auth_service = auth_service
         mcp_mount.set_application(mcp_application)
+        await rate_limit_coordinator.start_cleanup_tasks()
+        cleanup_tasks_started = True
         async with mcp_server.session_manager.run():
             yield
     finally:
+        if cleanup_tasks_started:
+            await rate_limit_coordinator.stop_cleanup_tasks()
         mcp_mount.set_application(None)
         mcp_server.set_data_service(None)
         application.state.data_service = None
@@ -64,12 +73,20 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app: FastAPI = FastAPI(lifespan=lifespan)
+rate_limit_coordinator: IpRateLimitCoordinator = IpRateLimitCoordinator(
+    auth_policy=Config().CHIPARK_RATE_LIMIT_AUTH,
+    global_policy=Config().CHIPARK_RATE_LIMIT_GLOBAL,
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(Config().cors_allow_origins),
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+app.add_middleware(
+    IpRateLimitMiddleware,
+    rate_limit_coordinator=rate_limit_coordinator,
 )
 app.middleware("http")(Telemetry.record_request)
 mcp_mount: McpAsgiApp = McpAsgiApp()

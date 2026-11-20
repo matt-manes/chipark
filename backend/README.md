@@ -79,7 +79,9 @@ Configuration is loaded from `backend/.env` and the process environment.
 comma-separated list of origins, `CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL` defaults
 to `http://localhost:5173/auth/callback`, and
 `CHIPARK_PG_URL` defaults to
-`postgresql+psycopg2://localhost:5432/chipark`. Optional settings include
+`postgresql+psycopg2://localhost:5432/chipark`. Rate limits default to
+`CHIPARK_RATE_LIMIT_AUTH=5/minute` for authentication endpoints and
+`CHIPARK_RATE_LIMIT_GLOBAL=60/minute` for all API requests. Optional settings include
 `CHIPARK_ADMIN_EMAIL`, `CHIPARK_ADMIN_PASSWORD`, `CHIPARK_WEATHERAPI_KEY`,
 `CHIPARK_PG_USER`, `CHIPARK_PG_PASS`, `CHIPARK_GOOGLE_CLIENT_ID`,
 `CHIPARK_GOOGLE_CLIENT_SECRET`, `CHIPARK_GOOGLE_REDIRECT_URI`, and
