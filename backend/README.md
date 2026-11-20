@@ -1,30 +1,28 @@
 # Backend
 
 * Install uv
-
-```console
-uv init backend --bare
-cd backend
-uv add "fastapi[standard-no-fastapi-cloud-cli]"
-```
+* Optionally install postgresql
 
 new machine:
 
 ```console
-git clone ****
+git clone https://github.com/matt-manes/chipark
 cd backend
 uv sync
-cd ..
-uv run --project backend python -m backend.scripts.populate_parks
-uv run --project backend python -m backend.scripts.populate_users
-uv run --project backend python -m backend.scripts.populate_tickets
 ```
 
-The default `uv sync` includes the `postgresql` dependency group and installs
-`psycopg2`. For a SQLite-only environment, omit that group explicitly:
+If not installing postgresql use
 
 ```console
 uv sync --no-group postgresql
+```
+
+## Data population
+
+```console
+uv run --project backend python -m backend.scripts.populate_parks
+uv run --project backend python -m backend.scripts.populate_users
+uv run --project backend python -m backend.scripts.populate_tickets
 ```
 
 `populate_users` registers the synthetic accounts from
