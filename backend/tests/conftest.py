@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Iterator
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -190,7 +190,7 @@ def sample_user(database: Database) -> User:
 @pytest.fixture
 def sample_conditions() -> Conditions:
     return Conditions(
-        last_updated=datetime.now(),
+        last_updated=datetime.now(UTC),
         temp_f=72.0,
         condition="Sunny",
         wind_mph=5.0,

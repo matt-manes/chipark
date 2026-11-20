@@ -9,7 +9,7 @@ class Conditions:
     Attributes
     ----------
     last_updated : datetime
-        Time at which the weather provider last updated this observation.
+        Time at which the weather provider last updated this observation, in UTC.
     temp_f : float
         Current temperature in degrees Fahrenheit.
     condition : str

@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Self
 
 from starlette.requests import Request
@@ -211,7 +211,7 @@ class DataService:
         expires_at: datetime = conditions.last_updated + timedelta(
             seconds=Config().CHIPARK_CONDITIONS_TTL
         )
-        return datetime.now() <= expires_at
+        return datetime.now(UTC) <= expires_at
 
     def park_exists(self, park_name: str) -> bool:
         """

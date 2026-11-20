@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session, sessionmaker
 
 from ..models.conditions import Conditions
@@ -102,7 +104,9 @@ class ConditionsRepository:
             ORM-compatible conditions fields.
         """
         return {
-            "last_updated": conditions.last_updated,
+            "last_updated": ConditionsRepository._to_database_time(
+                conditions.last_updated
+            ),
             "temp_f": conditions.temp_f,
             "condition": conditions.condition,
             "wind_mph": conditions.wind_mph,
@@ -116,6 +120,29 @@ class ConditionsRepository:
             "chance_of_rain": conditions.chance_of_rain,
             "chance_of_snow": conditions.chance_of_snow,
         }
+
+    @staticmethod
+    def _to_database_time(value: datetime) -> datetime:
+        """Convert an aware timestamp to the database's naive UTC format.
+
+        Parameters
+        ----------
+        value : datetime
+            Timezone-aware weather observation time.
+
+        Returns
+        -------
+        datetime
+            UTC timestamp without timezone information for database storage.
+
+        Raises
+        ------
+        ValueError
+            If the observation time has no timezone.
+        """
+        if value.utcoffset() is None:
+            raise ValueError("Weather observation time must include a timezone.")
+        return value.astimezone(UTC).replace(tzinfo=None)
 
     @staticmethod
     def _to_model(record: ConditionsRecord) -> Conditions:
@@ -132,7 +159,7 @@ class ConditionsRepository:
             Conditions represented by the record.
         """
         return Conditions(
-            last_updated=record.last_updated,
+            last_updated=record.last_updated.replace(tzinfo=UTC),
             temp_f=record.temp_f,
             condition=record.condition,
             wind_mph=record.wind_mph,

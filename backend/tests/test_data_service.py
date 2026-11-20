@@ -1,5 +1,5 @@
 from dataclasses import replace
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -292,7 +292,7 @@ def test_get_conditions_refreshes_expired_cached_entry(
     saved_park: Park = data_service.add_park(sample_park)
     expired_conditions: Conditions = replace(
         sample_conditions,
-        last_updated=datetime.now() - timedelta(minutes=30),
+        last_updated=datetime.now(UTC) - timedelta(minutes=30),
     )
     conditions_repository: ConditionsRepository = ConditionsRepository(
         database.session_factory

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import requests
@@ -75,7 +75,7 @@ class WeatherApiClient:
         response.raise_for_status()
         data: dict[str, Any] = response.json()["current"]
         return Conditions(
-            datetime.fromtimestamp(data["last_updated_epoch"]),
+            datetime.fromtimestamp(data["last_updated_epoch"], tz=UTC),
             data["temp_f"],
             data["condition"]["text"],
             data["wind_mph"],
