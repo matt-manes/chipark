@@ -20,6 +20,13 @@ uv run --project backend python -m backend.scripts.populate_users
 uv run --project backend python -m backend.scripts.populate_tickets
 ```
 
+The default `uv sync` includes the `postgresql` dependency group and installs
+`psycopg2`. For a SQLite-only environment, omit that group explicitly:
+
+```console
+uv sync --no-group postgresql
+```
+
 `populate_users` registers the synthetic accounts from
 `backend/data/sample-users.json` and writes their generated credentials to the
 git-ignored `backend/data/registered-sample-users.json`. Run it before

@@ -61,6 +61,7 @@ wheels = [
 name = "backend"
 version = "0.1.0"
 source = { editable = "." }
+default-groups = ["postgresql"]
 dependencies = [
     { name = "black" },
     { name = "coverage" },
@@ -72,12 +73,16 @@ dependencies = [
     { name = "opentelemetry-instrumentation-fastapi" },
     { name = "opentelemetry-instrumentation-sqlalchemy" },
     { name = "opentelemetry-sdk" },
-    { name = "psycopg2" },
     { name = "pytest" },
     { name = "python-dotenv" },
     { name = "rich" },
     { name = "ruff" },
     { name = "sqlalchemy" },
+]
+
+[package.dev-dependencies]
+postgresql = [
+    { name = "psycopg2" },
 ]
 
 [package.metadata]
@@ -92,13 +97,15 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.51b0" },
     { name = "opentelemetry-instrumentation-sqlalchemy", specifier = ">=0.51b0" },
     { name = "opentelemetry-sdk", specifier = ">=1.30.0" },
-    { name = "psycopg2", specifier = ">=2.9.13" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "python-dotenv", specifier = ">=1.2.4" },
     { name = "rich", specifier = ">=15.0.0" },
     { name = "ruff", specifier = ">=0.17.3" },
     { name = "sqlalchemy", specifier = "<2.1.0" },
 ]
+
+[package.metadata.requires-dev]
+postgresql = [{ name = "psycopg2", specifier = ">=2.9.13" }]
 
 [[package]]
 name = "black"

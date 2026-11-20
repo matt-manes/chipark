@@ -17,7 +17,6 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.51b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.51b0",
     "opentelemetry-sdk>=1.30.0",
-    "psycopg2>=2.9.13",
     "pytest>=9.1.1",
     "python-dotenv>=1.2.4",
     "rich>=15.0.0",
@@ -35,3 +34,11 @@ packages = ["scripts"]
 
 [tool.ruff.lint]
 ignore = ["I001", "BLE001"]
+
+[dependency-groups]
+postgresql = [
+    "psycopg2>=2.9.13",
+]
+
+[tool.uv]
+default-groups = ["postgresql"]
