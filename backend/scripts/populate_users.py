@@ -79,6 +79,10 @@ class SampleUserPopulator:
 
 def main() -> None:
     """Populate the database with the configured sample users."""
+    if REGISTERED_USERS_PATH.exists():
+        print("Error: Registered users data file exists.")
+        print("Refusing to overwrite.")
+        return
     count: int = SampleUserPopulator().populate()
     print(f"Registered {count} sample users.")
     print(f"Login data written to '{REGISTERED_USERS_PATH}'.")
