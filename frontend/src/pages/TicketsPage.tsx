@@ -3,6 +3,7 @@ import { ApiErrorFormatter, type ChiparkApiClient } from '../api/ChiparkApiClien
 import { TicketStatusValue, type Park, type Ticket, type TicketStatus, type User } from '../api/types'
 import Paginator from '../components/Paginator'
 import TicketTable from '../components/TicketTable'
+import { useTicketSubmitters } from '../hooks/useTicketSubmitters'
 import { TicketCatalog, type TicketFilters, type TicketSortField } from '../utils/catalog'
 
 const PAGE_SIZE: number = 50
@@ -18,6 +19,7 @@ interface TicketsPageProps {
   user: User | null
   initialSearch: string
   onSelectPark: (parkId: number) => void
+  onSelectUser: (userId: number) => void
   onEditTicket: (ticketId: number) => void
 }
 
@@ -26,6 +28,7 @@ export default function TicketsPage({
   user,
   initialSearch,
   onSelectPark,
+  onSelectUser,
   onEditTicket
 }: TicketsPageProps) {
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -39,6 +42,15 @@ export default function TicketsPage({
     ...DEFAULT_FILTERS,
     search: initialSearch
   })
+  const isAdmin: boolean = user?.role === 'admin'
+  const submitterData = useTicketSubmitters(
+    api,
+    isAdmin && tickets.some(ticket => ticket.user_id !== null)
+  )
+  const activeFilters: TicketFilters =
+    !isAdmin && filters.sortBy === 'submitted_by'
+      ? { ...filters, sortBy: DEFAULT_FILTERS.sortBy }
+      : filters
 
   useEffect(() => {
     const controller: AbortController = new AbortController()
@@ -61,8 +73,12 @@ export default function TicketsPage({
   }, [api, refreshVersion])
 
   const filteredTickets: Ticket[] = useMemo(
-    () => TicketCatalog.filterAndSort(tickets, filters),
-    [tickets, filters]
+    () => TicketCatalog.filterAndSort(
+      tickets,
+      activeFilters,
+      isAdmin ? submitterData.submitters : undefined
+    ),
+    [tickets, activeFilters, isAdmin, submitterData.submitters]
   )
   const pageCount: number = Math.max(1, Math.ceil(filteredTickets.length / PAGE_SIZE))
   const visibleTickets: Ticket[] = filteredTickets.slice(
@@ -121,7 +137,7 @@ export default function TicketsPage({
           <input
             type="search"
             value={filters.search}
-            placeholder="Park, ticket number, or issue"
+            placeholder={isAdmin ? 'Park, ticket, issue, or submitter' : 'Park, ticket number, or issue'}
             onChange={event => updateFilter('search', event.target.value)}
           />
         </label>
@@ -142,13 +158,14 @@ export default function TicketsPage({
         <label>
           Sort by
           <select
-            value={filters.sortBy}
+            value={activeFilters.sortBy}
             onChange={event => updateFilter('sortBy', event.target.value as TicketSortField)}
           >
             <option value="ticket_id">Ticket number</option>
             <option value="park_name">Park</option>
             <option value="file_date">Date filed</option>
             <option value="estimated_hours">Estimated hours</option>
+            {isAdmin && <option value="submitted_by">Submitted by</option>}
           </select>
         </label>
         <label className="check-field">
@@ -162,14 +179,17 @@ export default function TicketsPage({
         <button type="button" onClick={resetFilters}>Reset</button>
       </div>
       {error !== null && <div className="alert alert-error" role="alert">{error}</div>}
-      {loading ? (
+      {loading || submitterData.loading ? (
         <div className="loading-state">Loading tickets...</div>
       ) : (
         <div className="content-card">
           <TicketTable
+            api={api}
             tickets={visibleTickets}
-            isAdmin={user?.role === 'admin'}
+            isAdmin={isAdmin}
+            submitterData={submitterData}
             onParkClick={visitPark}
+            onSelectUser={onSelectUser}
             onClose={ticketId => void changeStatus(ticketId, TicketStatusValue.CLOSED)}
             onReopen={ticketId => void changeStatus(ticketId, TicketStatusValue.OPEN)}
             onEdit={onEditTicket}
@@ -177,7 +197,7 @@ export default function TicketsPage({
           />
         </div>
       )}
-      {!loading && (
+      {!loading && !submitterData.loading && (
         <Paginator
           page={page}
           pageCount={pageCount}

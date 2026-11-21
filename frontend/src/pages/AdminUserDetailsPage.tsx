@@ -5,6 +5,7 @@ import {
 } from '../api/ChiparkApiClient'
 import type { AdminUser, Ticket, TicketStatus } from '../api/types'
 import { TicketStatusValue } from '../api/types'
+import AdminUserActions from '../components/AdminUserActions'
 import TicketTable from '../components/TicketTable'
 
 interface AdminUserDetailsPageProps {
@@ -13,6 +14,8 @@ interface AdminUserDetailsPageProps {
   onBack: () => void
   onParkName: (parkName: string) => void
   onEditTicket: (ticketId: number) => void
+  onSelectUser: (userId: number) => void
+  onUserUpdated: (user: AdminUser) => void
 }
 
 export default function AdminUserDetailsPage({
@@ -20,7 +23,9 @@ export default function AdminUserDetailsPage({
   userId,
   onBack,
   onParkName,
-  onEditTicket
+  onEditTicket,
+  onSelectUser,
+  onUserUpdated
 }: AdminUserDetailsPageProps) {
   const [account, setAccount] = useState<AdminUser | null>(null)
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -68,6 +73,11 @@ export default function AdminUserDetailsPage({
     }
   }
 
+  function updateAccount(updatedUser: AdminUser): void {
+    setAccount(updatedUser)
+    onUserUpdated(updatedUser)
+  }
+
   if (loading) return <div className="loading-state">Loading user details...</div>
   if (account === null) {
     return (
@@ -96,6 +106,12 @@ export default function AdminUserDetailsPage({
             {account.role} - {account.is_active ? 'Enabled' : 'Disabled'}
           </p>
         </div>
+        <AdminUserActions
+          api={api}
+          user={account}
+          onUpdated={updateAccount}
+          onError={setError}
+        />
       </div>
       <section className="content-card">
         <div className="section-title">
@@ -106,9 +122,11 @@ export default function AdminUserDetailsPage({
           <span className="result-count">{tickets.length} tickets</span>
         </div>
         <TicketTable
+          api={api}
           tickets={tickets}
           isAdmin
           onParkClick={onParkName}
+          onSelectUser={onSelectUser}
           onClose={ticketId =>
             void changeTicketStatus(ticketId, TicketStatusValue.CLOSED)
           }

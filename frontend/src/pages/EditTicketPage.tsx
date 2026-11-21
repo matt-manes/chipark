@@ -1,19 +1,23 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ApiErrorFormatter, type ChiparkApiClient } from '../api/ChiparkApiClient'
 import { TicketStatusValue, type Ticket, type TicketStatus } from '../api/types'
+import TicketSubmitter from '../components/TicketSubmitter'
+import { useTicketSubmitters } from '../hooks/useTicketSubmitters'
 
 interface EditTicketPageProps {
   api: ChiparkApiClient
   ticketId: number
   onBack: () => void
   onSaved: () => void
+  onSelectUser: (userId: number) => void
 }
 
 export default function EditTicketPage({
   api,
   ticketId,
   onBack,
-  onSaved
+  onSaved,
+  onSelectUser
 }: EditTicketPageProps) {
   const [ticket, setTicket] = useState<Ticket | null>(null)
   const [issue, setIssue] = useState('')
@@ -22,6 +26,10 @@ export default function EditTicketPage({
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { submitters, error: submittersError } = useTicketSubmitters(
+    api,
+    ticket !== null && ticket.user_id !== null
+  )
 
   useEffect(() => {
     const controller: AbortController = new AbortController()
@@ -69,8 +77,24 @@ export default function EditTicketPage({
     <section className="page-section narrow-page">
       <button type="button" className="back-button" onClick={onBack}>Back to tickets</button>
       <div className="page-heading">
-        <div><p className="eyebrow">Ticket #{ticket.ticket_id} - {ticket.park_name}</p><h1>Edit ticket</h1></div>
+        <div>
+          <p className="eyebrow">Ticket #{ticket.ticket_id} - {ticket.park_name}</p>
+          <h1>Edit ticket</h1>
+          <p>
+            Submitted by{' '}
+            <TicketSubmitter
+              userId={ticket.user_id}
+              submitters={submitters}
+              onSelectUser={onSelectUser}
+            />
+          </p>
+        </div>
       </div>
+      {submittersError !== null && (
+        <div className="alert alert-error" role="alert">
+          Could not load ticket submitter: {submittersError}
+        </div>
+      )}
       <form className="content-card form-card" onSubmit={event => void save(event)}>
         {error !== null && <div className="alert alert-error" role="alert">{error}</div>}
         <label>

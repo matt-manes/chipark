@@ -11,6 +11,7 @@ interface ProfilePageProps {
   user: User
   onUserUpdated: (user: User) => void
   onParkSearch: (parkName: string) => void
+  onSelectUser: (userId: number) => void
   onEditTicket: (ticketId: number) => void
 }
 
@@ -19,6 +20,7 @@ export default function ProfilePage({
   user,
   onUserUpdated,
   onParkSearch,
+  onSelectUser,
   onEditTicket
 }: ProfilePageProps) {
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -133,9 +135,11 @@ export default function ProfilePage({
         <div className="section-title"><div><p className="eyebrow">Your activity</p><h2>Submitted tickets</h2></div></div>
         {loading ? <div className="loading-state">Loading submitted tickets...</div> : (
           <TicketTable
+            api={api}
             tickets={tickets}
             isAdmin={user.role === 'admin'}
             onParkClick={onParkSearch}
+            onSelectUser={onSelectUser}
             onEdit={onEditTicket}
           />
         )}

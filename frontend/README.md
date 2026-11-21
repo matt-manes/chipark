@@ -14,6 +14,8 @@ The [backend README](../backend/README.md) describes the API and server-side aut
 - Register or sign in with email and password or Google, submit tickets, and manage a profile.
 - Receive ticket notifications and mark them as read.
 - As an administrator, edit, close, or reopen tickets and manage users.
+- Administrators can follow a ticket's submitter link to manage that user's role and account status.  
+- Administrators can search and sort tickets by submitter.  
 
 Park and ticket search, filtering, sorting, and pagination run in the browser on data fetched from the API.  
 The parks, tickets, and users pages provide a reset button to clear searches and filters and restore the default sorting.  

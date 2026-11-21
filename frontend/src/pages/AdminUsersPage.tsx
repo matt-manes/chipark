@@ -3,7 +3,8 @@ import {
   ApiErrorFormatter,
   type ChiparkApiClient
 } from '../api/ChiparkApiClient'
-import type { AdminUser, UserRole } from '../api/types'
+import type { AdminUser } from '../api/types'
+import AdminUserActions from '../components/AdminUserActions'
 import Paginator from '../components/Paginator'
 import {
   AdminUserCatalog,
@@ -17,11 +18,13 @@ const DEFAULT_REVERSE: boolean = false
 interface AdminUsersPageProps {
   api: ChiparkApiClient
   onSelectUser: (userId: number) => void
+  onUserUpdated: (user: AdminUser) => void
 }
 
 export default function AdminUsersPage({
   api,
-  onSelectUser
+  onSelectUser,
+  onUserUpdated
 }: AdminUsersPageProps) {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [search, setSearch] = useState('')
@@ -29,7 +32,6 @@ export default function AdminUsersPage({
   const [reverse, setReverse] = useState(DEFAULT_REVERSE)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
-  const [updatingUserId, setUpdatingUserId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -69,33 +71,11 @@ export default function AdminUsersPage({
     setPage(1)
   }
 
-  async function changeRole(user: AdminUser): Promise<void> {
-    const role: UserRole = user.role === 'admin' ? 'user' : 'admin'
-    await updateUser(user.user_id, () => api.updateUserRole(user.user_id, role))
-  }
-
-  async function toggleActive(user: AdminUser): Promise<void> {
-    await updateUser(user.user_id, () =>
-      api.setUserActive(user.user_id, !user.is_active)
+  function updateUser(updatedUser: AdminUser): void {
+    setUsers(current =>
+      current.map(user => user.user_id === updatedUser.user_id ? updatedUser : user)
     )
-  }
-
-  async function updateUser(
-    userId: number,
-    update: () => Promise<AdminUser>
-  ): Promise<void> {
-    setUpdatingUserId(userId)
-    setError(null)
-    try {
-      const updatedUser: AdminUser = await update()
-      setUsers(current =>
-        current.map(user => user.user_id === userId ? updatedUser : user)
-      )
-    } catch (reason) {
-      setError(ApiErrorFormatter.getMessage(reason))
-    } finally {
-      setUpdatingUserId(null)
-    }
+    onUserUpdated(updatedUser)
   }
 
   return (
@@ -177,21 +157,13 @@ export default function AdminUsersPage({
                       </td>
                       <td>{user.role}</td>
                       <td>{user.is_active ? 'Enabled' : 'Disabled'}</td>
-                      <td className="action-cell">
-                        <button
-                          type="button"
-                          disabled={updatingUserId === user.user_id}
-                          onClick={() => void changeRole(user)}
-                        >
-                          {user.role === 'admin' ? 'Demote' : 'Make admin'}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={updatingUserId === user.user_id}
-                          onClick={() => void toggleActive(user)}
-                        >
-                          {user.is_active ? 'Disable' : 'Enable'}
-                        </button>
+                      <td>
+                        <AdminUserActions
+                          api={api}
+                          user={user}
+                          onUpdated={updateUser}
+                          onError={setError}
+                        />
                       </td>
                     </tr>
                   ))}

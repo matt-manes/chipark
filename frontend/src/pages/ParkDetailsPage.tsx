@@ -10,6 +10,7 @@ interface ParkDetailsPageProps {
   onBack: () => void
   onSubmitTicket: (parkId: number) => void
   onParkClick: (parkName: string) => void
+  onSelectUser: (userId: number) => void
   onEditTicket: (ticketId: number) => void
 }
 
@@ -20,6 +21,7 @@ export default function ParkDetailsPage({
   onBack,
   onSubmitTicket,
   onParkClick,
+  onSelectUser,
   onEditTicket
 }: ParkDetailsPageProps) {
   const [park, setPark] = useState<Park | null>(null)
@@ -116,9 +118,11 @@ export default function ParkDetailsPage({
           <span className="result-count">{tickets.length} open</span>
         </div>
         <TicketTable
+          api={api}
           tickets={tickets}
           isAdmin={user?.role === 'admin'}
           onParkClick={onParkClick}
+          onSelectUser={onSelectUser}
           onClose={user?.role === 'admin' ? closeTicket : undefined}
           onEdit={user?.role === 'admin' ? onEditTicket : undefined}
           updatingTicketId={updatingTicketId}

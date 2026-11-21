@@ -100,6 +100,77 @@ test('ticket catalog searches issue text and filters status', () => {
   assert.deepEqual(result.map(ticket => ticket.ticket_id), [2])
 })
 
+const submitterTickets: Ticket[] = [
+  { ...tickets[0], user_id: 1 },
+  { ...tickets[1], user_id: 2 },
+  { ...tickets[0], ticket_id: 3, user_id: null }
+]
+const submitters: ReadonlyMap<number, string> = new Map([
+  [1, 'zara@example.com'],
+  [2, 'alex@example.com']
+])
+const submitterFilters = {
+  search: '',
+  status: 'all' as const,
+  sortBy: 'submitted_by' as const,
+  reverse: false
+}
+
+test('ticket catalog searches submitter email case-insensitively', () => {
+  const result = TicketCatalog.filterAndSort(
+    submitterTickets,
+    { ...submitterFilters, search: 'ALEX@' },
+    submitters
+  )
+
+  assert.deepEqual(result.map(ticket => ticket.ticket_id), [1])
+})
+
+test('ticket catalog sorts by submitter including unknown submitters', () => {
+  const result = TicketCatalog.filterAndSort(submitterTickets, submitterFilters, submitters)
+
+  assert.deepEqual(result.map(ticket => ticket.ticket_id), [1, 3, 2])
+})
+
+test('ticket catalog reverses submitter sorting', () => {
+  const result = TicketCatalog.filterAndSort(
+    submitterTickets,
+    { ...submitterFilters, reverse: true },
+    submitters
+  )
+
+  assert.deepEqual(result.map(ticket => ticket.ticket_id), [2, 3, 1])
+})
+
+test('ticket catalog searches the displayed fallback for missing submitters', () => {
+  const result = TicketCatalog.filterAndSort(
+    submitterTickets,
+    { ...submitterFilters, search: 'unknown' },
+    submitters
+  )
+
+  assert.deepEqual(result.map(ticket => ticket.ticket_id), [3])
+})
+
+test('ticket catalog searches the displayed ID when an account is unavailable', () => {
+  const result = TicketCatalog.filterAndSort(
+    submitterTickets,
+    { ...submitterFilters, search: 'user #1' },
+    new Map()
+  )
+
+  assert.deepEqual(result.map(ticket => ticket.ticket_id), [2])
+})
+
+test('ticket catalog does not search submitter labels without admin data', () => {
+  const result = TicketCatalog.filterAndSort(
+    submitterTickets,
+    { ...submitterFilters, search: 'user #1' }
+  )
+
+  assert.deepEqual(result, [])
+})
+
 const users: AdminUser[] = [
   { user_id: 1, email: 'zara@example.com', role: 'user', is_active: true },
   { user_id: 2, email: 'alex@example.com', role: 'admin', is_active: false }

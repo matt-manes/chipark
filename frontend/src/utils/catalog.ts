@@ -6,6 +6,7 @@ export type TicketSortField =
   | 'park_name'
   | 'file_date'
   | 'estimated_hours'
+  | 'submitted_by'
 export type AdminUserSortField = 'email' | 'role' | 'is_active'
 
 export interface ParkFilters {
@@ -73,12 +74,24 @@ export class ParkCatalog {
 }
 
 export class TicketCatalog {
-  static filterAndSort(tickets: Ticket[], filters: TicketFilters): Ticket[] {
+  static filterAndSort(
+    tickets: Ticket[],
+    filters: TicketFilters,
+    submitters?: ReadonlyMap<number, string>
+  ): Ticket[] {
     const search: string = filters.search.trim().toLocaleLowerCase()
     const matches: Ticket[] = tickets.filter(ticket => {
+      const searchableFields: string[] = [
+        ticket.park_name,
+        String(ticket.ticket_id),
+        ticket.issue
+      ]
+      if (submitters !== undefined) {
+        searchableFields.push(TicketCatalog.getSubmitterLabel(ticket.user_id, submitters))
+      }
       const textMatches: boolean =
         search.length === 0 ||
-        [ticket.park_name, String(ticket.ticket_id), ticket.issue].some(value =>
+        searchableFields.some(value =>
           value.toLocaleLowerCase().includes(search)
         )
       return (
@@ -107,9 +120,25 @@ export class TicketCatalog {
         case 'park_name':
           result = left.park_name.localeCompare(right.park_name)
           break
+        case 'submitted_by':
+          result = TicketCatalog.getSubmitterLabel(left.user_id, submitters)
+            .localeCompare(
+              TicketCatalog.getSubmitterLabel(right.user_id, submitters),
+              undefined,
+              { sensitivity: 'base', numeric: true }
+            )
+          break
       }
       return filters.reverse ? -result : result
     })
+  }
+
+  static getSubmitterLabel(
+    userId: number | null,
+    submitters?: ReadonlyMap<number, string>
+  ): string {
+    if (userId === null) return 'Unknown'
+    return submitters?.get(userId) ?? `User #${userId}`
   }
 
   private static compareEstimatedHours(

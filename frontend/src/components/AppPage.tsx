@@ -1,4 +1,4 @@
-import type { AuthenticatedUser, User } from '../api/types'
+import type { AdminUser, AuthenticatedUser, User } from '../api/types'
 import type { ChiparkApiClient } from '../api/ChiparkApiClient'
 import type { AppRoute } from '../navigation/AppRoute'
 import AccountAccessPage from '../pages/AccountAccessPage'
@@ -30,6 +30,12 @@ export default function AppPage({
   onUserUpdated,
   onParkName
 }: AppPageProps) {
+  function updateCurrentAdmin(updatedUser: AdminUser): void {
+    if (user?.user_id === updatedUser.user_id) {
+      onUserUpdated({ ...user, ...updatedUser })
+    }
+  }
+
   switch (route.type) {
     case 'login':
       return (
@@ -74,6 +80,7 @@ export default function AppPage({
           onBack={() => onNavigate('/parks')}
           onSubmitTicket={parkId => onNavigate(`/tickets/new?parkId=${parkId}`)}
           onParkClick={onParkName}
+          onSelectUser={userId => onNavigate(`/admin/users/${userId}`)}
           onEditTicket={ticketId => onNavigate(`/tickets/${ticketId}/edit`)}
         />
       )
@@ -94,6 +101,7 @@ export default function AppPage({
           ticketId={route.ticketId}
           onBack={() => onNavigate('/tickets')}
           onSaved={() => onNavigate('/tickets')}
+          onSelectUser={userId => onNavigate(`/admin/users/${userId}`)}
         />
       )
     case 'admin-user-details':
@@ -105,6 +113,8 @@ export default function AppPage({
           onBack={() => onNavigate('/admin/users')}
           onParkName={onParkName}
           onEditTicket={ticketId => onNavigate(`/tickets/${ticketId}/edit`)}
+          onSelectUser={userId => onNavigate(`/admin/users/${userId}`)}
+          onUserUpdated={updateCurrentAdmin}
         />
       )
     case 'admin-users':
@@ -112,6 +122,7 @@ export default function AppPage({
         <AdminUsersPage
           api={api}
           onSelectUser={userId => onNavigate(`/admin/users/${userId}`)}
+          onUserUpdated={updateCurrentAdmin}
         />
       )
     case 'tickets':
@@ -122,6 +133,7 @@ export default function AppPage({
           user={user}
           initialSearch={route.search}
           onSelectPark={parkId => onNavigate(`/parks/${parkId}`)}
+          onSelectUser={userId => onNavigate(`/admin/users/${userId}`)}
           onEditTicket={ticketId => onNavigate(`/tickets/${ticketId}/edit`)}
         />
       )
@@ -135,6 +147,7 @@ export default function AppPage({
           onParkSearch={name =>
             onNavigate(`/parks?search=${encodeURIComponent(name)}`)
           }
+          onSelectUser={userId => onNavigate(`/admin/users/${userId}`)}
           onEditTicket={ticketId => onNavigate(`/tickets/${ticketId}/edit`)}
         />
       )
