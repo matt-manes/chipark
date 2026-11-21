@@ -98,6 +98,21 @@ def test_missing_admin_user_returns_not_found(api_client: TestClient) -> None:
     assert response.status_code == 404
 
 
+def test_admin_can_get_user_details(api_client: TestClient) -> None:
+    user_id: int
+    user_id, _token = _register_user(api_client, "details-user@example.com")
+
+    response: Response = api_client.get(f"/admin/users/{user_id}")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "user_id": user_id,
+        "email": "details-user@example.com",
+        "role": "user",
+        "is_active": True,
+    }
+
+
 def test_admin_can_view_users_submitted_tickets(api_client: TestClient) -> None:
     user_id: int
     token: str
