@@ -430,12 +430,22 @@ main {
   padding: 1rem;
 }
 
+.park-filters {
+  grid-template-columns: minmax(13rem, 2fr) repeat(2, minmax(8rem, 1fr)) minmax(max-content, 1fr);
+}
+
 .ticket-filters {
-  grid-template-columns: minmax(15rem, 2fr) repeat(2, minmax(9rem, 1fr)) auto;
+  grid-template-columns: minmax(15rem, 2fr) repeat(2, minmax(9rem, 1fr)) auto auto;
 }
 
 .user-filters {
-  grid-template-columns: minmax(15rem, 2fr) minmax(9rem, 1fr) auto;
+  grid-template-columns: minmax(15rem, 2fr) minmax(9rem, 1fr) auto auto;
+}
+
+.park-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 label {

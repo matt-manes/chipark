@@ -5,6 +5,16 @@ import Paginator from '../components/Paginator'
 import { ParkCatalog, type ParkFilters, type ParkSortField } from '../utils/catalog'
 
 const PAGE_SIZE: number = 50
+const DEFAULT_FILTERS: ParkFilters = {
+  search: '',
+  ward: '',
+  zipCode: '',
+  parkClass: '',
+  minAcres: '',
+  maxAcres: '',
+  sortBy: 'name',
+  reverse: false
+}
 
 interface ParksPageProps {
   api: ChiparkApiClient
@@ -22,14 +32,8 @@ export default function ParksPage({
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [filters, setFilters] = useState<ParkFilters>({
-    search: initialSearch,
-    ward: '',
-    zipCode: '',
-    parkClass: '',
-    minAcres: '',
-    maxAcres: '',
-    sortBy: 'name',
-    reverse: false
+    ...DEFAULT_FILTERS,
+    search: initialSearch
   })
 
   useEffect(() => {
@@ -72,6 +76,11 @@ export default function ParksPage({
     setPage(1)
   }
 
+  function resetFilters(): void {
+    setFilters(DEFAULT_FILTERS)
+    setPage(1)
+  }
+
   return (
     <section className="page-section">
       <div className="page-heading">
@@ -83,7 +92,7 @@ export default function ParksPage({
         <span className="result-count">{filteredParks.length} parks</span>
       </div>
 
-      <div className="filter-panel">
+      <div className="filter-panel park-filters">
         <label className="search-field">
           Search parks
           <input
@@ -144,14 +153,17 @@ export default function ParksPage({
             onChange={event => updateFilter('maxAcres', event.target.value)}
           />
         </label>
-        <label className="check-field">
-          <input
-            type="checkbox"
-            checked={filters.reverse}
-            onChange={event => updateFilter('reverse', event.target.checked)}
-          />
-          Reverse order
-        </label>
+        <div className="park-filter-actions">
+          <label className="check-field">
+            <input
+              type="checkbox"
+              checked={filters.reverse}
+              onChange={event => updateFilter('reverse', event.target.checked)}
+            />
+            Reverse order
+          </label>
+          <button type="button" onClick={resetFilters}>Reset</button>
+        </div>
       </div>
 
       {error !== null && <div className="alert alert-error" role="alert">{error}</div>}

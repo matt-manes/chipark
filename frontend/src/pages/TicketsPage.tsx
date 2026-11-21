@@ -6,6 +6,12 @@ import TicketTable from '../components/TicketTable'
 import { TicketCatalog, type TicketFilters, type TicketSortField } from '../utils/catalog'
 
 const PAGE_SIZE: number = 50
+const DEFAULT_FILTERS: TicketFilters = {
+  search: '',
+  status: 'all',
+  sortBy: 'ticket_id',
+  reverse: true
+}
 
 interface TicketsPageProps {
   api: ChiparkApiClient
@@ -30,10 +36,8 @@ export default function TicketsPage({
   const [updatingTicketId, setUpdatingTicketId] = useState<number | null>(null)
   const [page, setPage] = useState(1)
   const [filters, setFilters] = useState<TicketFilters>({
-    search: initialSearch,
-    status: 'all',
-    sortBy: 'ticket_id',
-    reverse: true
+    ...DEFAULT_FILTERS,
+    search: initialSearch
   })
 
   useEffect(() => {
@@ -71,6 +75,11 @@ export default function TicketsPage({
     value: TicketFilters[K]
   ): void {
     setFilters(current => ({ ...current, [key]: value }))
+    setPage(1)
+  }
+
+  function resetFilters(): void {
+    setFilters(DEFAULT_FILTERS)
     setPage(1)
   }
 
@@ -150,6 +159,7 @@ export default function TicketsPage({
           />
           Reverse order
         </label>
+        <button type="button" onClick={resetFilters}>Reset</button>
       </div>
       {error !== null && <div className="alert alert-error" role="alert">{error}</div>}
       {loading ? (

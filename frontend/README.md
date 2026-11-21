@@ -16,6 +16,7 @@ The [backend README](../backend/README.md) describes the API and server-side aut
 - As an administrator, edit, close, or reopen tickets and manage users.
 
 Park and ticket search, filtering, sorting, and pagination run in the browser on data fetched from the API.  
+The parks, tickets, and users pages provide a reset button to clear searches and filters and restore the default sorting.  
 The backend enforces authorization for protected operations.
 
 ## Navigation and authentication

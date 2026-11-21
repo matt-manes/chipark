@@ -11,6 +11,8 @@ import {
 } from '../utils/catalog'
 
 const PAGE_SIZE: number = 50
+const DEFAULT_SORT: AdminUserSortField = 'email'
+const DEFAULT_REVERSE: boolean = false
 
 interface AdminUsersPageProps {
   api: ChiparkApiClient
@@ -23,8 +25,8 @@ export default function AdminUsersPage({
 }: AdminUsersPageProps) {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [search, setSearch] = useState('')
-  const [sortBy, setSortBy] = useState<AdminUserSortField>('email')
-  const [reverse, setReverse] = useState(false)
+  const [sortBy, setSortBy] = useState<AdminUserSortField>(DEFAULT_SORT)
+  const [reverse, setReverse] = useState(DEFAULT_REVERSE)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [updatingUserId, setUpdatingUserId] = useState<number | null>(null)
@@ -57,6 +59,13 @@ export default function AdminUsersPage({
 
   function updateSearch(value: string): void {
     setSearch(value)
+    setPage(1)
+  }
+
+  function resetFilters(): void {
+    setSearch('')
+    setSortBy(DEFAULT_SORT)
+    setReverse(DEFAULT_REVERSE)
     setPage(1)
   }
 
@@ -134,6 +143,7 @@ export default function AdminUsersPage({
           />
           Reverse order
         </label>
+        <button type="button" onClick={resetFilters}>Reset</button>
       </div>
       {error !== null && <div className="alert alert-error" role="alert">{error}</div>}
       {loading ? (
