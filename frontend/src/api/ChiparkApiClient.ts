@@ -16,6 +16,7 @@ import type {
 export class ChiparkApiClient {
   private readonly client: AxiosInstance
   private accessToken: string | null = null
+  private authenticationFailureHandler: (() => void) | null = null
 
   constructor (baseUrl: string = Config.API_BASE_URL) {
     this.client = axios.create({ baseURL: baseUrl })
@@ -25,10 +26,33 @@ export class ChiparkApiClient {
       }
       return config
     })
+    this.client.interceptors.response.use(undefined, (error: unknown) => {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        const path: string | undefined = error.config?.url
+        const authorization = error.config?.headers.get('Authorization')
+        if (path !== '/auth/login' && path !== '/auth/register') {
+          this.handleAuthenticationFailure(authorization)
+        }
+      }
+      return Promise.reject(error)
+    })
   }
 
   setAccessToken (token: string | null): void {
     this.accessToken = token
+  }
+
+  setAuthenticationFailureHandler (handler: (() => void) | null): void {
+    this.authenticationFailureHandler = handler
+  }
+
+  private handleAuthenticationFailure (authorization: unknown): void {
+    if (
+      this.accessToken !== null &&
+      authorization === `Bearer ${this.accessToken}`
+    ) {
+      this.authenticationFailureHandler?.()
+    }
   }
 
   getGoogleLoginUrl (): string {
@@ -230,6 +254,10 @@ export class ChiparkApiClient {
       `${this.client.defaults.baseURL}/notifications/stream`,
       { headers, signal }
     )
+    if (response.status === 401 && !signal.aborted) {
+      this.handleAuthenticationFailure(headers.Authorization)
+      throw new AuthenticationRequiredError()
+    }
     if (!response.ok || response.body === null) {
       throw new Error(
         `Notification stream failed with status ${response.status}.`
@@ -272,7 +300,19 @@ export class ChiparkApiClient {
   }
 }
 
+export class AuthenticationRequiredError extends Error {
+  constructor () {
+    super('Authentication is required.')
+    this.name = 'AuthenticationRequiredError'
+  }
+}
+
 export class ApiErrorFormatter {
+  static isAuthenticationRequired (error: unknown): boolean {
+    return error instanceof AuthenticationRequiredError ||
+      (axios.isAxiosError(error) && error.response?.status === 401)
+  }
+
   static getMessage (error: unknown): string {
     if (axios.isAxiosError<{ detail?: unknown }>(error)) {
       const detail: unknown = error.response?.data?.detail

@@ -40,6 +40,7 @@ class ApiTestServer {
   readonly blockedResponse: Promise<void>
   private releaseBlockedResponse: (() => void) | null = null
   private delayParksResponse: boolean = false
+  private readonly responseStatuses: Map<string, number> = new Map()
 
   constructor() {
     this.blockedResponse = new Promise(resolve => {
@@ -76,6 +77,14 @@ class ApiTestServer {
     this.delayParksResponse = true
   }
 
+  releaseParkResponse(): void {
+    this.releaseBlockedResponse?.()
+  }
+
+  respondWithStatus(path: string, status: number): void {
+    this.responseStatuses.set(path, status)
+  }
+
   private async handle(
     request: IncomingMessage,
     response: ServerResponse
@@ -98,6 +107,17 @@ class ApiTestServer {
       body
     })
 
+    if (path === '/parks' && this.delayParksResponse) {
+      await this.blockedResponse
+    }
+
+    const status: number | undefined = this.responseStatuses.get(path)
+    if (status !== undefined) {
+      response.writeHead(status, { 'Content-Type': 'application/json' })
+      response.end(JSON.stringify({ detail: 'Request rejected.' }))
+      return
+    }
+
     if (path === '/notifications/stream') {
       response.writeHead(200, { 'Content-Type': 'text/event-stream' })
       response.end(
@@ -108,10 +128,6 @@ class ApiTestServer {
           '"created_at":"2026-11-09T12:00:00","read_at":null}\n\n'
       )
       return
-    }
-
-    if (path === '/parks' && this.delayParksResponse) {
-      await this.blockedResponse
     }
 
     if (path === '/auth/logout') {
@@ -253,6 +269,87 @@ test('read methods pass an abort signal to Axios', async () => {
     controller.abort()
 
     await assert.rejects(request, { code: 'ERR_CANCELED' })
+  })
+})
+
+test('authenticated 401 responses notify the session handler', async () => {
+  await withApiServer(async (api, server) => {
+    let failures: number = 0
+    api.setAccessToken('revoked-token')
+    api.setAuthenticationFailureHandler(() => { failures += 1 })
+    server.respondWithStatus('/tickets/mine', 401)
+
+    await assert.rejects(api.getMyTickets())
+    assert.equal(failures, 1)
+  })
+})
+
+test('401 responses without a token do not notify the session handler', async () => {
+  await withApiServer(async (api, server) => {
+    let failures: number = 0
+    api.setAuthenticationFailureHandler(() => { failures += 1 })
+    server.respondWithStatus('/tickets/mine', 401)
+
+    await assert.rejects(api.getMyTickets())
+    assert.equal(failures, 0)
+  })
+})
+
+test('failed login does not invalidate an existing session', async () => {
+  await withApiServer(async (api, server) => {
+    let failures: number = 0
+    api.setAccessToken('current-token')
+    api.setAuthenticationFailureHandler(() => { failures += 1 })
+    server.respondWithStatus('/auth/login', 401)
+
+    await assert.rejects(api.login('member@example.com', 'wrong-password'))
+    assert.equal(failures, 0)
+  })
+})
+
+test('forbidden responses do not invalidate the session', async () => {
+  await withApiServer(async (api, server) => {
+    let failures: number = 0
+    api.setAccessToken('current-token')
+    api.setAuthenticationFailureHandler(() => { failures += 1 })
+    server.respondWithStatus('/admin/users', 403)
+
+    await assert.rejects(api.getAdminUsers())
+    assert.equal(failures, 0)
+  })
+})
+
+test('a late 401 for an old token does not invalidate a new session', async () => {
+  await withApiServer(async (api, server) => {
+    let failures: number = 0
+    api.setAccessToken('old-token')
+    api.setAuthenticationFailureHandler(() => { failures += 1 })
+    server.holdParkResponse()
+    server.respondWithStatus('/parks', 401)
+    const request: Promise<unknown> = api.getParks()
+    while (server.requests.length === 0) {
+      await new Promise(resolve => setTimeout(resolve, 1))
+    }
+    api.setAccessToken('new-token')
+    server.releaseParkResponse()
+
+    await assert.rejects(request)
+    assert.equal(failures, 0)
+  })
+})
+
+test('a rejected notification stream notifies the session handler', async () => {
+  await withApiServer(async (api, server) => {
+    let failures: number = 0
+    api.setAccessToken('revoked-token')
+    api.setAuthenticationFailureHandler(() => { failures += 1 })
+    server.respondWithStatus('/notifications/stream', 401)
+
+    await assert.rejects(
+      api.streamNotifications(new AbortController().signal, null, () => undefined),
+      /Authentication is required/
+    )
+    assert.equal(failures, 1)
   })
 })
 

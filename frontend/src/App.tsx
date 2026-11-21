@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 import { ApiErrorFormatter, chiparkApi } from './api/ChiparkApiClient'
 import type {
@@ -18,24 +18,54 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [authResolvedToken, setAuthResolvedToken] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null)
   const [notifications, setNotifications] = useState<TicketNotification[]>([])
   const [notificationsLoading, setNotificationsLoading] = useState(false)
   const [notificationsError, setNotificationsError] = useState<string | null>(null)
   const latestEventId = useRef<number | null>(null)
+  const authRequestController = useRef<AbortController | null>(null)
   const parkLookupController = useRef<AbortController | null>(null)
   const inboxRequestController = useRef<AbortController | null>(null)
+  const notificationStreamController = useRef<AbortController | null>(null)
   const notificationCount: number = notifications.filter(
     notification => notification.read_at === null
   ).length
   const authLoading: boolean =
     accessToken !== null && authResolvedToken !== accessToken
 
-  function navigate(path: string): void {
+  const navigate = useCallback((path: string): void => {
     parkLookupController.current?.abort()
     window.history.pushState(null, '', path)
     setRoute(BrowserRoute.current())
     setErrorMessage(null)
-  }
+    setNoticeMessage(null)
+  }, [])
+
+  const clearSession = useCallback((): void => {
+    AuthTokenStore.clear()
+    chiparkApi.setAccessToken(null)
+    setAccessToken(null)
+    setUser(null)
+    setAuthResolvedToken(null)
+    authRequestController.current?.abort()
+    authRequestController.current = null
+    inboxRequestController.current?.abort()
+    inboxRequestController.current = null
+    notificationStreamController.current?.abort()
+    notificationStreamController.current = null
+    setNotificationsLoading(false)
+    setNotifications([])
+    setNotificationsError(null)
+  }, [])
+
+  useEffect(() => {
+    chiparkApi.setAuthenticationFailureHandler(() => {
+      clearSession()
+      navigate('/parks')
+      setNoticeMessage("You've been logged out. Please sign in again.")
+    })
+    return () => chiparkApi.setAuthenticationFailureHandler(null)
+  }, [clearSession, navigate])
 
   useEffect(() => {
     const updateRoute = (): void => setRoute(BrowserRoute.current())
@@ -48,6 +78,7 @@ export default function App() {
     if (accessToken === null) return
 
     const controller: AbortController = new AbortController()
+    authRequestController.current = controller
     void chiparkApi.getCurrentUser(controller.signal)
       .then(currentUser => {
         if (controller.signal.aborted) return
@@ -62,15 +93,20 @@ export default function App() {
         }
       })
       .catch(reason => {
-        if (controller.signal.aborted) return
-        AuthTokenStore.clear()
-        chiparkApi.setAccessToken(null)
-        setAccessToken(null)
-        setUser(null)
+        if (
+          controller.signal.aborted ||
+          ApiErrorFormatter.isAuthenticationRequired(reason)
+        ) return
+        clearSession()
         setErrorMessage(ApiErrorFormatter.getMessage(reason))
       })
-    return () => controller.abort()
-  }, [accessToken])
+    return () => {
+      controller.abort()
+      if (authRequestController.current === controller) {
+        authRequestController.current = null
+      }
+    }
+  }, [accessToken, clearSession])
 
   useEffect(() => {
     if (accessToken === null) {
@@ -79,6 +115,7 @@ export default function App() {
     }
 
     const controller: AbortController = new AbortController()
+    notificationStreamController.current = controller
     let retryTimer: number | null = null
     latestEventId.current = null
 
@@ -98,7 +135,10 @@ export default function App() {
           retryTimer = window.setTimeout(() => void connectToNotifications(), 1500)
         }
       } catch (reason) {
-        if (!controller.signal.aborted) {
+        if (
+          !controller.signal.aborted &&
+          !ApiErrorFormatter.isAuthenticationRequired(reason)
+        ) {
           setErrorMessage(`Notification connection: ${ApiErrorFormatter.getMessage(reason)}`)
           retryTimer = window.setTimeout(() => void connectToNotifications(), 3000)
         }
@@ -108,6 +148,9 @@ export default function App() {
     void connectToNotifications()
     return () => {
       controller.abort()
+      if (notificationStreamController.current === controller) {
+        notificationStreamController.current = null
+      }
       if (retryTimer !== null) window.clearTimeout(retryTimer)
     }
   }, [accessToken])
@@ -177,20 +220,12 @@ export default function App() {
     try {
       await chiparkApi.logout()
     } catch (reason) {
+      if (ApiErrorFormatter.isAuthenticationRequired(reason)) return
       logoutError = ApiErrorFormatter.getMessage(reason)
-    } finally {
-      AuthTokenStore.clear()
-      chiparkApi.setAccessToken(null)
-      setAccessToken(null)
-      setUser(null)
-      setAuthResolvedToken(null)
-      inboxRequestController.current?.abort()
-      inboxRequestController.current = null
-      setNotifications([])
-      setNotificationsError(null)
-      navigate('/parks')
-      if (logoutError !== null) setErrorMessage(logoutError)
     }
+    clearSession()
+    navigate('/parks')
+    if (logoutError !== null) setErrorMessage(logoutError)
   }
 
   async function navigateToParkName(parkName: string): Promise<void> {
@@ -216,6 +251,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <Header
+        key={user?.user_id ?? 'signed-out'}
         user={user}
         notificationCount={notificationCount}
         notifications={notifications}
@@ -235,6 +271,12 @@ export default function App() {
           <button type="button" onClick={() => setErrorMessage(null)}>Dismiss</button>
         </div>
       )}
+      {noticeMessage !== null && (
+        <div className="global-error alert alert-info" role="status">
+          <span>{noticeMessage}</span>
+          <button type="button" onClick={() => setNoticeMessage(null)}>Dismiss</button>
+        </div>
+      )}
       <main>
         <AppContent
           api={chiparkApi}
@@ -243,7 +285,11 @@ export default function App() {
           authLoading={authLoading}
           onNavigate={navigate}
           onAuthenticated={onAuthenticated}
-          onUserUpdated={setUser}
+          onUserUpdated={updatedUser => {
+            setUser(current =>
+              current?.user_id === updatedUser.user_id ? updatedUser : current
+            )
+          }}
           onParkName={parkName => void navigateToParkName(parkName)}
         />
       </main>

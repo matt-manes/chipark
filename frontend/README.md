@@ -26,6 +26,7 @@ Public pages include `/parks`, `/parks/{id}`, `/tickets`, `/login`, and `/regist
 Ticket submission and profiles require an authenticated account; ticket editing and user administration require an administrator.
 
 `src/navigation/BrowserRoute.ts` stores the application bearer token in browser local storage.  
+An authentication rejection for the current token clears the local session and returns the user to the parks page with a logout notice.  
 For Google sign-in, the backend redirects to `/auth/callback` with a token in the URL fragment; the frontend stores the token and removes the fragment from the address bar.  
 `src/api/ChiparkApiClient.ts` sends the token in the `Authorization` header for authenticated requests.
 
