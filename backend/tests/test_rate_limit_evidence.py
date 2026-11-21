@@ -73,9 +73,7 @@ def test_capture_records_that_auth_requests_count_toward_global_limit(
     output: io.StringIO = io.StringIO()
     recorder: CurlRecorder = CurlRecorder("http://localhost:8000", output)
 
-    RateLimitEvidence(
-        recorder, RateLimitPolicy(1, 60), RateLimitPolicy(1, 60), 1
-    ).run()
+    RateLimitEvidence(recorder, RateLimitPolicy(1, 60), RateLimitPolicy(1, 60), 1).run()
 
     assert "count toward the subsequent park test" in output.getvalue()
 
@@ -91,9 +89,7 @@ def test_capture_does_not_wait_or_retry_after_429(
     monkeypatch.setattr("backend.scripts.api_evidence.time.sleep", reject_sleep)
     recorder: CurlRecorder = CurlRecorder("http://localhost:8000", io.StringIO())
 
-    RateLimitEvidence(
-        recorder, RateLimitPolicy(1, 60), RateLimitPolicy(1, 60), 1
-    ).run()
+    RateLimitEvidence(recorder, RateLimitPolicy(1, 60), RateLimitPolicy(1, 60), 1).run()
 
     assert len(curl.configs) == 2
 
