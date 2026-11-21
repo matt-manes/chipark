@@ -2,8 +2,9 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from starlette.applications import Starlette
+from starlette.exceptions import HTTPException
+from starlette.routing import Route
 
 from backend.repositories import Database, DatabaseFactory
 from backend.routers.admin_users import router as admin_users_router
@@ -14,6 +15,7 @@ from backend.routers.tickets import router as tickets_router
 from backend.services.auth_service import AuthService
 from backend.services.data_service import DataService
 from backend.tools.config import Config
+from backend.tools.http_errors import ApiCORSMiddleware, HttpErrorResponses
 from backend.tools.mcp_server import ChiparkMcpServer, McpAsgiApp
 from backend.tools.rate_limiting import (
     IpRateLimitCoordinator,
@@ -89,12 +91,19 @@ class ApplicationFactory:
         FastAPI
             Application with documentation routes configured.
         """
-        return FastAPI(
+        application: FastAPI = FastAPI(
             lifespan=lifespan,
             docs_url="/docs" if docs_enabled else None,
             redoc_url="/redoc" if docs_enabled else None,
             openapi_url="/openapi.json" if docs_enabled else None,
         )
+        application.add_exception_handler(
+            HTTPException, HttpErrorResponses.handle_http_exception
+        )
+        application.add_exception_handler(
+            Exception, HttpErrorResponses.handle_unexpected_exception
+        )
+        return application
 
 
 app: FastAPI = ApplicationFactory.create(Config().CHIPARK_ENABLE_DOCS)
@@ -103,7 +112,7 @@ rate_limit_coordinator: IpRateLimitCoordinator = IpRateLimitCoordinator(
     global_policy=Config().CHIPARK_RATE_LIMIT_GLOBAL,
 )
 app.add_middleware(
-    CORSMiddleware,
+    ApiCORSMiddleware,
     allow_origins=list(Config().cors_allow_origins),
     allow_credentials=False,
     allow_methods=["*"],
@@ -128,4 +137,4 @@ async def yeehaw() -> dict[str, str]:
     return {"message": "yeehaw"}
 
 
-app.mount("/", app=mcp_mount)
+app.router.routes.append(Route("/mcp", endpoint=mcp_mount, include_in_schema=False))

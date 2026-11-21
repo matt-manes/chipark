@@ -11,6 +11,8 @@ from fastapi.responses import JSONResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
 
+from .http_errors import HttpErrorResponses
+
 
 @dataclass(frozen=True)
 class RateLimitPolicy:
@@ -321,9 +323,9 @@ class IpRateLimitMiddleware(BaseHTTPMiddleware):
     @staticmethod
     def _build_limit_response(decision: RateLimitDecision) -> JSONResponse:
         """Build a standard response for an exhausted rate-limit window."""
-        return JSONResponse(
+        return HttpErrorResponses.create(
             status_code=429,
-            content={"detail": "Too many requests. Try again later."},
+            message="Too many requests. Try again later.",
             headers={
                 "Retry-After": str(decision.retry_after_seconds),
                 "X-RateLimit-Remaining": str(decision.remaining),

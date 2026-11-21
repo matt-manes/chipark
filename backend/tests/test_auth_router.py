@@ -88,7 +88,7 @@ def test_profile_update_requires_current_password_for_password_change(
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "The current password is incorrect."
+    assert response.json()["detail"][0]["msg"] == "The current password is incorrect."
 
 
 def test_profile_update_changes_password(api_client: TestClient) -> None:
@@ -115,7 +115,10 @@ def test_profile_update_rejects_empty_changes(api_client: TestClient) -> None:
     response: Response = api_client.patch("/auth/me", json={})
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "At least one profile field must be provided."
+    assert (
+        response.json()["detail"][0]["msg"]
+        == "At least one profile field must be provided."
+    )
 
 
 def test_cors_allows_configured_frontend_origin(api_client: TestClient) -> None:

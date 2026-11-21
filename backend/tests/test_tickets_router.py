@@ -349,7 +349,7 @@ def test_admin_update_returns_422_for_empty_update(
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"] == "At least one field is required."
+    assert response.json()["detail"][0]["msg"] == "At least one field is required."
 
 
 def test_admin_update_returns_422_for_null_issue(
@@ -361,7 +361,7 @@ def test_admin_update_returns_422_for_null_issue(
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"] == "Ticket issue cannot be null."
+    assert response.json()["detail"][0]["msg"] == "Ticket issue cannot be null."
 
 
 def test_admin_can_delete_ticket(api_client: TestClient, saved_ticket: Ticket) -> None:

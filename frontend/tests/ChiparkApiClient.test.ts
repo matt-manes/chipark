@@ -3,9 +3,28 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from 'node:net'
 import test from 'node:test'
 import {
+  ApiErrorFormatter,
   ChiparkApiClient
 } from '../src/api/ChiparkApiClient.ts'
 import type { TicketNotification } from '../src/api/types.ts'
+
+test('error formatter displays messages from multiple error details', () => {
+  const error: unknown = {
+    isAxiosError: true,
+    response: { data: { detail: [{ msg: 'First error' }, { msg: 'Second error' }] } }
+  }
+
+  assert.equal(ApiErrorFormatter.getMessage(error), 'First error\nSecond error')
+})
+
+test('error formatter retains fallback for malformed details', () => {
+  const error: unknown = {
+    isAxiosError: true,
+    response: { data: { detail: [{ type: 'invalid' }] } }
+  }
+
+  assert.equal(ApiErrorFormatter.getMessage(error), '[{"type":"invalid"}]')
+})
 
 interface CapturedRequest {
   method: string

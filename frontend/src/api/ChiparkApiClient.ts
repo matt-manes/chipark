@@ -275,8 +275,17 @@ export class ChiparkApiClient {
 export class ApiErrorFormatter {
   static getMessage (error: unknown): string {
     if (axios.isAxiosError<{ detail?: unknown }>(error)) {
-      const detail: unknown = error.response?.data.detail
+      const detail: unknown = error.response?.data?.detail
       if (typeof detail === 'string') return detail
+      if (Array.isArray(detail)) {
+        const messages: string[] = detail
+          .filter((item: unknown): item is { msg: string } =>
+            typeof item === 'object' && item !== null &&
+            'msg' in item && typeof item.msg === 'string'
+          )
+          .map(item => item.msg)
+        if (messages.length > 0) return messages.join('\n')
+      }
       if (detail !== undefined) {
         return (
           JSON.stringify(detail) ?? 'The server returned invalid error details.'
