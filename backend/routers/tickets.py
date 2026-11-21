@@ -8,13 +8,19 @@ from ..models.ticket import Ticket, TicketStatus, TicketSubmission, TicketUpdate
 from ..models.user import User
 from ..services.auth_dependencies import AuthDependencies
 from ..services.data_service import DataService
+from ..services.ticket_visibility import TicketVisibility
 
-router: APIRouter = APIRouter(prefix="/tickets", tags=["tickets"])
+router: APIRouter = APIRouter(
+    prefix="/tickets",
+    tags=["tickets"],
+    dependencies=[Depends(TicketVisibility.prevent_caching)],
+)
 
 
 @router.get("")
 def get_tickets(
     data_service: Annotated[DataService, Depends(DataService.get_default_service)],
+    user: Annotated[User | None, Depends(AuthDependencies.optional_user)],
 ) -> list[Ticket]:
     """
     Retrieve all tickets.
@@ -23,13 +29,17 @@ def get_tickets(
     ----------
     data_service : DataService
         App-scoped service backed by the configured database.
+    user : User or None
+        Authenticated account, if present.
 
     Returns
     -------
     list[Ticket]
         Tickets ordered by their database identifiers.
     """
-    return data_service.get_tickets()
+    return [
+        TicketVisibility.for_user(ticket, user) for ticket in data_service.get_tickets()
+    ]
 
 
 @router.get("/mine")
@@ -51,13 +61,17 @@ def get_my_tickets(
     list[Ticket]
         Tickets submitted by the current account.
     """
-    return data_service.get_tickets_for_user(user.user_id)
+    return [
+        TicketVisibility.for_user(ticket, user)
+        for ticket in data_service.get_tickets_for_user(user.user_id)
+    ]
 
 
 @router.get("/parks/{park_id}/open")
 def get_open_tickets_for_park(
     park_id: int,
     data_service: Annotated[DataService, Depends(DataService.get_default_service)],
+    user: Annotated[User | None, Depends(AuthDependencies.optional_user)],
 ) -> list[Ticket]:
     """Retrieve open tickets for a park.
 
@@ -67,6 +81,8 @@ def get_open_tickets_for_park(
         Identifier of the park.
     data_service : DataService
         App-scoped service backed by the configured database.
+    user : User or None
+        Authenticated account, if present.
 
     Returns
     -------
@@ -79,7 +95,10 @@ def get_open_tickets_for_park(
         If the park does not exist.
     """
     try:
-        return data_service.get_open_tickets_for_park(park_id)
+        return [
+            TicketVisibility.for_user(ticket, user)
+            for ticket in data_service.get_open_tickets_for_park(park_id)
+        ]
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
 
@@ -88,6 +107,7 @@ def get_open_tickets_for_park(
 def get_ticket(
     ticket_id: int,
     data_service: Annotated[DataService, Depends(DataService.get_default_service)],
+    user: Annotated[User | None, Depends(AuthDependencies.optional_user)],
 ) -> Ticket:
     """
     Retrieve a ticket by its database identifier.
@@ -98,6 +118,8 @@ def get_ticket(
         Identifier of the requested ticket.
     data_service : DataService
         App-scoped service backed by the configured database.
+    user : User or None
+        Authenticated account, if present.
 
     Returns
     -------
@@ -110,7 +132,7 @@ def get_ticket(
         If the ticket does not exist.
     """
     try:
-        return data_service.get_ticket(ticket_id)
+        return TicketVisibility.for_user(data_service.get_ticket(ticket_id), user)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
 
@@ -157,7 +179,7 @@ def add_ticket(
         issue=escape(ticket_submission.issue),
         user_id=user.user_id,
     )
-    return data_service.add_ticket(ticket)
+    return TicketVisibility.for_user(data_service.add_ticket(ticket), user)
 
 
 @router.patch("/{ticket_id}/close")

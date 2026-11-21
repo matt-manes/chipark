@@ -58,6 +58,17 @@ def administrator_context(auth_service: AuthService) -> Context:
     return _create_context(auth_service, authenticated_admin.access_token)
 
 
+@pytest.fixture
+def owned_mcp_ticket(
+    data_service: DataService, sample_ticket: Ticket, auth_service: AuthService
+) -> Ticket:
+    owner: AuthenticatedUser = auth_service.register(
+        "ticket-owner@example.com", "a-secure-password"
+    )
+    sample_ticket.user_id = owner.user.user_id
+    return data_service.add_ticket(sample_ticket)
+
+
 def _create_context(auth_service: AuthService, token: str | None) -> Context:
     """Create an MCP request context with an optional bearer credential.
 
@@ -149,14 +160,45 @@ def test_list_tickets_returns_saved_tickets(
     mcp_server: ChiparkMcpServer,
     data_service: DataService,
     sample_ticket: Ticket,
+    unauthenticated_context: Context,
 ) -> None:
     data_service.add_ticket(sample_ticket)
 
-    tickets: list[TicketToolResult] = mcp_server.list_tickets()
+    tickets: list[TicketToolResult] = mcp_server.list_tickets(unauthenticated_context)
 
     assert len(tickets) == 1
     assert tickets[0]["issue"] == sample_ticket.issue
     assert tickets[0]["status"] == sample_ticket.status
+
+
+def test_anonymous_mcp_ticket_list_hides_user_id(
+    mcp_server: ChiparkMcpServer,
+    owned_mcp_ticket: Ticket,
+    unauthenticated_context: Context,
+) -> None:
+    tickets: list[TicketToolResult] = mcp_server.list_tickets(unauthenticated_context)
+
+    assert tickets[0]["user_id"] is None
+
+
+def test_regular_user_mcp_ticket_list_hides_user_id(
+    mcp_server: ChiparkMcpServer,
+    owned_mcp_ticket: Ticket,
+    mcp_user_context: Context,
+) -> None:
+    tickets: list[TicketToolResult] = mcp_server.list_tickets(mcp_user_context)
+
+    assert tickets[0]["user_id"] is None
+
+
+def test_admin_mcp_ticket_list_includes_user_id(
+    mcp_server: ChiparkMcpServer,
+    owned_mcp_ticket: Ticket,
+    administrator_context: Context,
+) -> None:
+    tickets: list[TicketToolResult] = mcp_server.list_tickets(administrator_context)
+
+    assert tickets[0]["user_id"] == owned_mcp_ticket.user_id
 
 
 def test_get_park_returns_park_by_id(
@@ -195,6 +237,29 @@ def test_submit_ticket_creates_open_ticket(
     )
 
     assert ticket["status"] == TicketStatus.OPEN
+
+
+def test_regular_user_mcp_submission_hides_user_id(
+    mcp_server: ChiparkMcpServer,
+    sample_park: Park,
+    mcp_user_context: Context,
+) -> None:
+    ticket: TicketToolResult = mcp_server.submit_ticket(
+        sample_park.name, "Broken bench", ctx=mcp_user_context
+    )
+
+    assert ticket["user_id"] is None
+
+
+def test_admin_mcp_submission_includes_user_id(
+    mcp_server: ChiparkMcpServer,
+    sample_park: Park,
+    administrator_context: Context,
+) -> None:
+    ticket: TicketToolResult = mcp_server.submit_ticket(
+        sample_park.name, "Broken bench", ctx=administrator_context
+    )
+
     assert ticket["user_id"] is not None
 
 

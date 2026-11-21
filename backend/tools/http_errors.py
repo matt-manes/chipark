@@ -28,13 +28,13 @@ class HttpErrorResponses:
         )
 
     @staticmethod
-    async def handle_http_exception(
-        request: Request, exception: Exception
-    ) -> Response:
+    async def handle_http_exception(request: Request, exception: Exception) -> Response:
         if not isinstance(exception, HTTPException):
             raise exception
         if not is_body_allowed_for_status_code(exception.status_code):
-            return Response(status_code=exception.status_code, headers=exception.headers)
+            return Response(
+                status_code=exception.status_code, headers=exception.headers
+            )
         return HttpErrorResponses.create(
             exception.status_code, str(exception.detail), exception.headers
         )

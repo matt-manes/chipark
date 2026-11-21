@@ -2,7 +2,7 @@ from dataclasses import asdict
 from datetime import datetime
 from html import escape
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, TypeGuard
 
 from mcp.server import MCPServer
 from mcp.server.mcpserver.context import Context
@@ -15,8 +15,9 @@ from starlette.types import Receive, Scope, Send
 from ..models.park import Park
 from ..models.ticket import Ticket, TicketStatus, TicketUpdate
 from ..models.user import User, UserRole
-from ..services.auth_service import AuthService
+from ..services.auth_dependencies import AuthDependencies
 from ..services.data_service import DataService
+from ..services.ticket_visibility import TicketVisibility
 
 ParkToolResult = dict[str, str | int | float | None]
 TicketToolResult = dict[str, str | int | float | TicketStatus | None]
@@ -209,9 +210,14 @@ class ChiparkMcpServer:
         parks: list[Park] = data_service.get_parks()
         return [self._park_to_result(park) for park in parks]
 
-    def list_tickets(self) -> list[TicketToolResult]:
+    def list_tickets(self, ctx: Context) -> list[TicketToolResult]:
         """
         List tickets stored in the database.
+
+        Parameters
+        ----------
+        ctx : Context
+            MCP context containing the caller's HTTP request.
 
         Returns
         -------
@@ -220,7 +226,16 @@ class ChiparkMcpServer:
         """
         data_service: DataService = self._require_data_service()
         tickets: list[Ticket] = data_service.get_tickets()
-        return [self._ticket_to_result(ticket) for ticket in tickets]
+        request: object = ctx.request_context.request
+        user: User | None = (
+            AuthDependencies.optional_user(request)
+            if self._is_http_request(request)
+            else None
+        )
+        return [
+            self._ticket_to_result(TicketVisibility.for_user(ticket, user))
+            for ticket in tickets
+        ]
 
     def get_park(self, park_id: int) -> ParkToolResult:
         """
@@ -290,7 +305,7 @@ class ChiparkMcpServer:
             user_id=user.user_id,
         )
         saved_ticket: Ticket = data_service.add_ticket(ticket)
-        return self._ticket_to_result(saved_ticket)
+        return self._ticket_to_result(TicketVisibility.for_user(saved_ticket, user))
 
     def close_ticket(self, ticket_id: int, ctx: Context) -> TicketToolResult:
         """Close a ticket after verifying administrator privileges.
@@ -420,6 +435,11 @@ class ChiparkMcpServer:
             raise RuntimeError("The Chipark application lifespan is not active.")
         return self._data_service
 
+    @staticmethod
+    def _is_http_request(request: object) -> TypeGuard[Request]:
+        """Check whether the MCP context contains an HTTP request."""
+        return isinstance(request, Request)
+
     def _require_mcp_user(self, context: Context) -> User:
         """Authenticate the user making the current MCP request.
 
@@ -441,12 +461,9 @@ class ChiparkMcpServer:
             If the request has no valid bearer token.
         """
         request: object = context.request_context.request
-        if not isinstance(request, Request):
+        if not self._is_http_request(request):
             raise TypeError("A bearer token is required for this MCP tool.")
-        auth_service: AuthService = request.app.state.auth_service
-        user: User | None = auth_service.authenticate_authorization_header(
-            request.headers.get("authorization")
-        )
+        user: User | None = AuthDependencies.optional_user(request)
         if user is None:
             raise ValueError("A valid bearer token is required for this MCP tool.")
         return user
