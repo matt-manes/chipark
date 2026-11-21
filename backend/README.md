@@ -1,145 +1,78 @@
-# Backend
+# ChiPark backend
 
-* Install uv
-* Optionally install postgresql
+The ChiPark backend is a Python FastAPI application backed by SQLAlchemy.  
+It serves park and ticket data, account and administration operations, notifications, weather conditions, and an MCP server.  
+Park records come from the City of Chicago Data Portal; sample accounts, tickets, and notifications are synthetic.
 
-new machine:
+For installation, configuration, local startup, data population, deployment, and observability, see the [runbook](../RUNBOOK.md).  
+The [frontend README](../frontend/README.md) describes the browser application.
 
-```console
-git clone https://github.com/matt-manes/chipark
-cd backend
-uv sync
-```
+## API
 
-If not installing postgresql use
+The application in `app.py` mounts the following routers:
 
-```console
-uv sync --no-group postgresql
-```
+| Route | Purpose | Access |
+| --- | --- | --- |
+| `/parks` | List parks, get park details, and retrieve weather conditions | Public |
+| `/tickets` | Browse, submit, and manage maintenance tickets | Browsing is public; submission requires an account; updates and deletion require an administrator |
+| `/auth` | Register, sign in, sign out, and manage the current profile | Registration and sign-in are public; profile and sign-out require an account |
+| `/admin/users` | View users and their tickets, change roles, and activate or deactivate accounts | Administrator |
+| `/notifications` | List notifications, mark them as read, and receive a live stream | Authenticated account |
 
-## Data population
+Interactive API documentation is available at `/docs` and `/redoc`, with the schema at `/openapi.json`.  
+Set `CHIPARK_ENABLE_DOCS=false` to disable these routes.  
+The [runbook](../RUNBOOK.md) covers configuration and deployment.
 
-```console
-uv run --project backend python -m backend.scripts.populate_parks
-uv run --project backend python -m backend.scripts.populate_users
-uv run --project backend python -m backend.scripts.populate_tickets
-```
+## Authentication and notifications
 
-`populate_users` registers the synthetic accounts from
-`backend/data/sample-users.json` and writes their generated credentials to the
-git-ignored `backend/data/registered-sample-users.json`. Run it before
-`populate_tickets`; imported synthetic tickets are assigned random user IDs.
+Accounts support email and password registration and login, as well as Google sign-in when configured.  
+The server issues opaque bearer tokens, stores their hashes, and enforces account and administrator permissions on protected operations.  
+Signing out revokes the token.
 
-From the repo root a default .env file can be generated with `uv run --project backend python -m backend.scripts.new_env`.  
-The new file will have all the env vars currently used by the project.  
-These values override ones set in the actual environment, so to use the ones set in the actual environment just set the key to have no value in the .env file.
+Notifications belong to the authenticated user and can be retrieved or marked as read through the API.  
+The authenticated server-sent events stream at `/notifications/stream` supports replay using the `Last-Event-ID` request header.
 
-The `backend.repositories` package provides SQLite-backed repositories for the
-`Park` and `Ticket` models. By default, `SqliteDatabase` stores data in
-`backend/data/chipark.sqlite3`; pass a path or `":memory:"` to select another
-database.
+## Data and configuration
 
-The workspace MCP server is configured in the repository-root `.mcp.json`. It
-provides tools to list the available tools, list parks and tickets, retrieve a
-park by ID, and manage tickets. Ticket submission requires a bearer token, and
-the MCP client must send it in the `Authorization` header. Ticket editing,
-closing, and deletion require an administrator token.
+`CHIPARK_DATABASE` environment variable selects SQLite or PostgreSQL.  
+PostgreSQL support is included by the default dependency group; omitting that group with `--no-default-groups` when running `uv sync` leaves SQLite available.  
+If PostgreSQL is not installed, `uv sync` will fail.  
 
-The MCP App explorer is bundled by `npm run build` in `frontend`. The backend
-serves `frontend/dist/mcp-app/mcp-app.html` through the `ui://chipark/explorer.html`
-resource, so deployments must build the frontend bundle before starting the API.
+Weather conditions are retrieved from WeatherAPI and cached according to the configured conditions TTL.  
 
-## Observability
+See the [runbook](../RUNBOOK.md) for environment variables, database setup, data loading, and operational procedures.
 
-The backend exports OpenTelemetry traces, metrics, and structured logs over
-OTLP/HTTP when an OTLP endpoint is configured. It also writes JSON logs to
-stdout, which Render exposes in the service's Logs view. The frontend uses
-Grafana Faro for browser errors, console logs, web vitals, and traces. See
-[`../observability/README.md`](../observability/README.md) for Grafana Cloud
-setup, the availability SLI/SLO, and the alert rule.
+## MCP server
 
-## Accounts and authorization
+The backend mounts a Streamable HTTP MCP server exposing `list_tools`, `list_parks`, `list_tickets`, and `get_park`.  
+It also exposes `submit_ticket` to authenticated users and `close_ticket`, `edit_ticket`, and `delete_ticket` to administrators.  
+The `list_parks` and `list_tickets` tools reference the ChiPark Explorer MCP App, whose bundle is built by the frontend and served by the backend.  
+See the [runbook](../RUNBOOK.md) for the MCP App build and deployment procedure.
 
-API documentation is enabled by default. Set `CHIPARK_ENABLE_DOCS=false` in
-the process environment or `backend/.env` and restart the backend to disable
-`/docs`, `/redoc`, and `/openapi.json`.
+## Source layout
 
-Set `CHIPARK_ADMIN_EMAIL` and `CHIPARK_ADMIN_PASSWORD` in the process
-environment or `backend/.env` before starting the API. Values in `backend/.env`
-override values from the process environment.
-The configured account is created as an administrator or an existing account
-with that email is promoted and assigned the configured password. If these
-variables are omitted, startup requires an administrator to already exist.
+| Path | Purpose |
+| --- | --- |
+| `app.py` | FastAPI application, lifespan, middleware, and router registration |
+| `routers/` | HTTP endpoints |
+| `services/` | Data, authentication, and notification behavior |
+| `repositories/` | Database access and persistence |
+| `models/` | Application and database models |
+| `clients/` | External service clients |
+| `tools/` | Configuration, MCP server, telemetry, and other supporting tools |
+| `tests/` | Backend tests |
+| `scripts/` | Project maintenance and data-loading commands |
 
-Create an account with `POST /auth/register` or sign in with `POST /auth/login`.
-Both return an opaque bearer token that expires after 24 hours. Send it as
-`Authorization: Bearer <token>` on authenticated requests. `POST /auth/logout`
-revokes the token; `GET /auth/me` returns the current account.
+## Development commands
 
-Google sign-in is available through `GET /auth/google`. Configure
-`CHIPARK_GOOGLE_CLIENT_ID`, `CHIPARK_GOOGLE_CLIENT_SECRET`, and
-`CHIPARK_GOOGLE_REDIRECT_URI` in the process environment or `backend/.env`;
-register the backend callback URL
-`/auth/google/callback` with Google. The callback redirects to
-`CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL` with the bearer token in the URL
-fragment. The configured frontend callback is
-`http://localhost:5173/auth/callback`.
+Run these commands from the repository root after installing backend dependencies:
 
-Configuration is loaded from `backend/.env` and the process environment.
-`CHIPARK_DATABASE` defaults to `postgresql`,
-`CHIPARK_CONDITIONS_TTL` defaults to 900 seconds (15 minutes),
-`CHIPARK_CORS_ALLOW_LIST` defaults to `http://localhost:5173` and accepts a
-comma-separated list of origins, `CHIPARK_GOOGLE_FRONTEND_REDIRECT_URL` defaults
-to `http://localhost:5173/auth/callback`, and
-`CHIPARK_PG_URL` defaults to
-`postgresql+psycopg2://localhost:5432/chipark`. Rate limits default to
-`CHIPARK_RATE_LIMIT_AUTH=5/minute` for authentication endpoints and
-`CHIPARK_RATE_LIMIT_GLOBAL=60/minute` for all API requests. Optional settings include
-`CHIPARK_ADMIN_EMAIL`, `CHIPARK_ADMIN_PASSWORD`, `CHIPARK_WEATHERAPI_KEY`,
-`CHIPARK_PG_USER`, `CHIPARK_PG_PASS`, `CHIPARK_GOOGLE_CLIENT_ID`,
-`CHIPARK_GOOGLE_CLIENT_SECRET`, `CHIPARK_GOOGLE_REDIRECT_URI`, and
-`CHIPARK_TEST_PG_URL`, `CHIPARK_TEST_PG_USER`, and
-`CHIPARK_TEST_PG_PASSWORD`. OpenTelemetry settings include
-`OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`,
-`OTEL_RESOURCE_ATTRIBUTES`, `OTEL_EXPORTER_OTLP_HEADERS`, and the
-corresponding signal-specific endpoint and header variables for traces,
-metrics, and logs. Set `OTEL_RESOURCE_ATTRIBUTES` to
-`deployment.environment=development` locally or
-`deployment.environment=production` in Render. The backend adds `host.name`
-from the runtime hostname unless you provide it in this variable.
+| Command | Purpose |
+| --- | --- |
+| `uv run --project backend pytest` | Run backend tests |
+| `uv run --project backend coverage-suite` | Run tests with coverage and generate reports |
+| `uv run --project backend quality-checks` | Run project quality tools, including formatters that can modify files |
 
-Authenticated users can update password-based account details with
-`PATCH /auth/me`; Google-linked accounts manage their credentials through
-Google. `GET /tickets/mine` returns the current user's submitted tickets.
-Administrators can reopen tickets with `PATCH /tickets/{ticket_id}/reopen`,
-and `GET /tickets/parks/{park_id}/open` returns a park's open tickets.
-Administrators can view and manage accounts through `/admin/users`.
-
-To use PostgreSQL, set `CHIPARK_DATABASE` to `postgresql`, configure
-`CHIPARK_PG_URL` with the SQLAlchemy URL excluding credentials, and provide
-`CHIPARK_PG_USER` and `CHIPARK_PG_PASS` through the process environment or
-`backend/.env`.
-
-Tests use SQLite by default. To run them against PostgreSQL, set
-`CHIPARK_TEST_PG_URL` to a dedicated PostgreSQL test database URL whose database
-name contains `test`, and set `CHIPARK_TEST_PG_USER` and
-`CHIPARK_TEST_PG_PASSWORD` in the process environment or `backend/.env`. These
-test-specific credentials are used instead of the application credentials
-`CHIPARK_PG_USER` and `CHIPARK_PG_PASS`. Each test creates a uniquely named
-schema and drops it afterward, keeping test tables and sequences isolated from
-other runs. Do not point this URL at a development or production database.
-
-Any authenticated user can submit tickets. Only administrators can edit tickets
-with `PATCH /tickets/{ticket_id}`, close tickets with
-`PATCH /tickets/{ticket_id}/close`, or delete tickets with
-`DELETE /tickets/{ticket_id}`. Existing tickets are retained with no owner when
-the ownership column is added; new tickets are associated with their submitter.
-
-Ticket updates, closures, and deletions create a persisted notification for the
-ticket submitter as part of the same database transaction. Authenticated users
-can list their notifications at `GET /notifications`, mark one read with
-`PATCH /notifications/{notification_id}/read`, and receive new notifications
-over `GET /notifications/stream`. The SSE endpoint requires the bearer token in
-the `Authorization` header and polls the database once per second. It supports
-`Last-Event-ID` for reconnect replay; clients should use a fetch-based SSE
-implementation because browser `EventSource` cannot send the bearer header.
+The shared database fixture uses a temporary SQLite database by default.  
+To use PostgreSQL for that fixture, set `CHIPARK_TEST_PG_URL`, `CHIPARK_TEST_PG_USER`, and `CHIPARK_TEST_PG_PASSWORD`; the database name must contain `test`.  
+The fixture creates a separate schema for each test and drops it afterward.
