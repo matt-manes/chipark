@@ -7,6 +7,7 @@ from typing import ClassVar
 from mcp.server import MCPServer
 from mcp.server.mcpserver.context import Context
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.types import Receive, Scope, Send
@@ -121,7 +122,21 @@ class ChiparkMcpServer:
         Starlette
             MCP application exposing the Streamable HTTP endpoint.
         """
-        return self._server.streamable_http_app()
+        return self._server.streamable_http_app(
+            transport_security=TransportSecuritySettings(
+                allowed_hosts=[
+                    "127.0.0.1:*",
+                    "localhost:*",
+                    "[::1]:*",
+                    "api.csc436.xyz",
+                ],
+                allowed_origins=[
+                    "http://127.0.0.1:*",
+                    "http://localhost:*",
+                    "http://[::1]:*",
+                ],
+            )
+        )
 
     @property
     def session_manager(self) -> StreamableHTTPSessionManager:
