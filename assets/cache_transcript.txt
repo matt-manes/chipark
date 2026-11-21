@@ -1,0 +1,39 @@
+>curl -sS -D - -o NUL https://api.csc436.xyz/parks/1
+HTTP/1.1 200 OK
+Date: Sat, 21 Nov 2026 17:48:15 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+cf-cache-status: MISS
+rndr-id: 31f30a4a-a7f1-4cb4
+Server: cloudflare
+vary: Origin
+vary: Accept-Encoding
+x-render-origin-server: uvicorn
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+last-modified: Sat, 21 Nov 2026 17:48:15 GMT
+Cache-Control: no-store
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=YqI%2B6G8F2BatVbfwfK4ce00XUFWKdsK4TCuLOAKuUazmDaUM7iyE0NqBq2aQ6zlBZlZaHKV6CcUQ%2FBqzbAbOUpdu9yGQ3zFwjleevJXyqMmTfpUjRrw2aBz28RUFXC%2BYpg%3D%3D"}]}
+CF-RAY: a5e186342f56eabe-ORD
+alt-svc: h3=":443"; ma=86400
+
+
+>curl -sS -D - -o NUL https://api.csc436.xyz/parks/1
+HTTP/1.1 200 OK
+Date: Sat, 21 Nov 2026 17:48:18 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+cf-cache-status: HIT
+rndr-id: 31f30a4a-a7f1-4cb4
+Server: cloudflare
+vary: Origin
+vary: Accept-Encoding
+x-render-origin-server: uvicorn
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+Age: 2
+last-modified: Sat, 21 Nov 2026 17:48:15 GMT
+Cache-Control: no-store
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=H2O6JI3cIrkwtWjh42LTOHFP2vJZcok%2FAYaf6V1iGWSzMYoQqKp3LiDc6Js5PDeRcqXI4vERoEMAuNum1uRq5z5CDIsnH6qvnPNCLeqSkn%2BgeliWxDPD%2FnO43Fy%2FDJyR1w%3D%3D"}]}
+CF-RAY: a5e186461ca14fa9-ORD
+alt-svc: h3=":443"; ma=86400

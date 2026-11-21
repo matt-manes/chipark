@@ -1,0 +1,51 @@
+ALLOWED ORIGIN
+-------
+>curl -i -X OPTIONS -H "Origin: https://csc436.xyz" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: authorization,content-type" https://api.csc436.xyz/parks/1
+HTTP/1.1 200 OK
+Date: Sat, 21 Nov 2026 17:53:26 GMT
+Content-Type: text/plain; charset=utf-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+access-control-allow-headers: authorization,content-type
+access-control-allow-methods: DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT, QUERY
+access-control-allow-origin: https://csc436.xyz
+access-control-max-age: 600
+cf-cache-status: DYNAMIC
+rndr-id: e0cdce1d-2c6f-41ce
+Server: cloudflare
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Request-Private-Network
+vary: Accept-Encoding
+x-render-origin-server: uvicorn
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=DozlgZ%2F%2BtPKLLMMtD%2FC8fOpp0H3XMTDW88%2BY5ayXN12RxXZ1lQOk%2FVh2TjzqAcrBQYttF2Fn6SV6F9Cq9C67JsCF26QCa0evUgeIVO8HHnBDJzHNH5HS75h9WbQKzQqHCQ%3D%3D"}]}
+CF-RAY: a5e18dcd6c87dadc-ORD
+alt-svc: h3=":443"; ma=86400
+
+OK
+
+
+
+
+DISALLOWED ORIGIN
+----------
+>curl -i -X OPTIONS -H "Origin: https://api.csc436.xyz" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: authorization,content-type" https://api.csc436.xyz/parks/1
+HTTP/1.1 400 Bad Request
+Date: Sat, 21 Nov 2026 17:53:51 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+access-control-allow-headers: authorization,content-type
+access-control-allow-methods: DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT, QUERY
+access-control-max-age: 600
+cf-cache-status: DYNAMIC
+rndr-id: 2e885628-d415-4ff5
+Server: cloudflare
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Request-Private-Network
+vary: Accept-Encoding
+x-render-origin-server: uvicorn
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=xcBFnoz6os1M8mQMQniIZ2ToBgaSCQFoFJRrDe9rsU0aUzYDaBR8ul70jfNvdWLw%2BM%2Fz6jCG78L3GoQD%2F70K%2FDmyBGKMPBxUwkHSDpqX4jGHLs9bouioIChIdwmf6U%2FZmQ%3D%3D"}]}
+CF-RAY: a5e18e6868c1ff5d-ORD
+alt-svc: h3=":443"; ma=86400
+
+{"detail":[{"type":"http_error","loc":[],"msg":"Disallowed CORS origin","input":null}]}

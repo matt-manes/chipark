@@ -4,6 +4,7 @@ __pycache__
 *.sqlite3
 .coverage
 *.txt
+!assets/*.txt
 *.env*
 *registered-sample-users*.json
 *pg.url

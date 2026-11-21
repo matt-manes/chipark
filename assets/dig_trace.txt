@@ -1,0 +1,84 @@
+$ dig +trace csc436.xyz
+
+; <<>> DiG 9.18.39-0ubuntu0.22.04.8-Ubuntu <<>> +trace csc436.xyz
+;; global options: +cmd
+.                       490163  IN      NS      l.root-servers.net.
+.                       490163  IN      NS      m.root-servers.net.
+.                       490163  IN      NS      a.root-servers.net.
+.                       490163  IN      NS      b.root-servers.net.
+.                       490163  IN      NS      c.root-servers.net.
+.                       490163  IN      NS      d.root-servers.net.
+.                       490163  IN      NS      e.root-servers.net.
+.                       490163  IN      NS      f.root-servers.net.
+.                       490163  IN      NS      g.root-servers.net.
+.                       490163  IN      NS      h.root-servers.net.
+.                       490163  IN      NS      i.root-servers.net.
+.                       490163  IN      NS      j.root-servers.net.
+.                       490163  IN      NS      k.root-servers.net.
+;; Received 811 bytes from 127.0.0.53#53(127.0.0.53) in 27 ms
+
+xyz.                    172800  IN      NS      z.nic.xyz.
+xyz.                    172800  IN      NS      y.nic.xyz.
+xyz.                    172800  IN      NS      x.nic.xyz.
+xyz.                    172800  IN      NS      generationxyz.nic.xyz.
+xyz.                    86400   IN      DS      18130 8 2 5AA5961266594CCEAC50949A99219FE004F130E1864A427143E9FF2E 641CAC6F
+xyz.                    86400   IN      DS      3599 8 2 B9733869BC84C86BB59D102BA5DA6B27B2088552332A39DCD54BC4E8 D66B0499
+xyz.                    86400   IN      RRSIG   DS 8 1 86400 20261204050000 20261121040000 8763 . P4TaZ2iVZDirb9YS3qUf/WjymI7atEHLX4Gmc3yU5VaSceaNVjK2rx4d UE/sV0HxB49Cf3huWGUzzeJPblujwky4ed+rlrVHrtCG8Vq9UGrsTH9D ciZ6f4br7DAgWLMU48IYmXzkWO7TsKboxhYasd3b8lh9P1kHMJ+gH7rC 9XLfJJEUIXejrlm274ia4/syG0HNyRHxeFq9yr2WyaAuTscp0f79AIVY ZNs0HJqUA+Gmsg53mWM6/bD+nEOugXF4XuqWaS3SLBF6kUnI6Axi3V1R 1gVpzuStZoatEeOnJHW1U5sLa+41E69FCnNqEUkyILQefnQtjpQkXEOf FV+wRQ==
+;; Received 706 bytes from 2001:500:2::c#53(c.root-servers.net) in 22 ms
+
+csc436.xyz.             3600    IN      NS      adele.ns.cloudflare.com.
+csc436.xyz.             3600    IN      NS      david.ns.cloudflare.com.
+2tjms8vm0h8n7j9e748d19gpnujm0emj.xyz. 900 IN NSEC3 1 1 0 - 2TJP5FRIV5KUA5J3R2QK9SCPC27BTDPH NS SOA RRSIG DNSKEY NSEC3PARAM
+vcs9usike64emq48btetiiv7o2huiffl.xyz. 900 IN NSEC3 1 1 0 - VCSPG4A5Q32LPO8FUIJV2GN1FV3DOBTI NS DS RRSIG
+2tjms8vm0h8n7j9e748d19gpnujm0emj.xyz. 900 IN RRSIG NSEC3 8 2 900 20261213073223 20261113060223 65206 xyz. osyL8Q4a5Hs2EDDRZIkWcrkY4hsAiw8V8TUIvMIXscHaJ7zh3tPLy5ih f8uOnJ+garfcO0VahqNZBvxm0b5L9/jblqKtokR32uNEJi9gnE4+Puxr YCNM66PhwytmYFdR8M66ndN7GHWEjIJibnFEzdDnrS8r7yKm0iRoqxcP rKU=
+vcs9usike64emq48btetiiv7o2huiffl.xyz. 900 IN RRSIG NSEC3 8 2 900 20261212091438 20261112074438 65206 xyz. eoEJWJTFkmpV41l2uKnxxn0sRuSU9kCQrOkO/CaoEZByqIiEOho5w6hG EHcW4SVq5RUKnnnb/LRb60YNV/HLq/TSGt4YXVTCvgw8+QLYxjnxqXGF ko0JJX4qD7yykj/WbecP+YSnumOpWjkTDdAWu69A6v7UDNzkbYqqw4bN oCQ=
+;; Received 609 bytes from 2001:67c:13cc::1:42#53(x.nic.xyz) in 32 ms
+
+csc436.xyz.             300     IN      A       104.21.61.87
+csc436.xyz.             300     IN      A       172.67.207.249
+;; Received 71 bytes from 173.245.59.152#53(david.ns.cloudflare.com) in 22 ms
+
+
+
+=====================================================================================================================================
+
+
+$ dig +trace api.csc436.xyz
+
+; <<>> DiG 9.18.39-0ubuntu0.22.04.8-Ubuntu <<>> +trace api.csc436.xyz
+;; global options: +cmd
+.                       7186    IN      NS      d.root-servers.net.
+.                       7186    IN      NS      e.root-servers.net.
+.                       7186    IN      NS      f.root-servers.net.
+.                       7186    IN      NS      i.root-servers.net.
+.                       7186    IN      NS      a.root-servers.net.
+.                       7186    IN      NS      j.root-servers.net.
+.                       7186    IN      NS      k.root-servers.net.
+.                       7186    IN      NS      l.root-servers.net.
+.                       7186    IN      NS      b.root-servers.net.
+.                       7186    IN      NS      m.root-servers.net.
+.                       7186    IN      NS      g.root-servers.net.
+.                       7186    IN      NS      c.root-servers.net.
+.                       7186    IN      NS      h.root-servers.net.
+;; Received 811 bytes from 127.0.0.53#53(127.0.0.53) in 3 ms
+
+xyz.                    172800  IN      NS      x.nic.xyz.
+xyz.                    172800  IN      NS      y.nic.xyz.
+xyz.                    172800  IN      NS      z.nic.xyz.
+xyz.                    172800  IN      NS      generationxyz.nic.xyz.
+xyz.                    86400   IN      DS      3599 8 2 B9733869BC84C86BB59D102BA5DA6B27B2088552332A39DCD54BC4E8 D66B0499
+xyz.                    86400   IN      DS      18130 8 2 5AA5961266594CCEAC50949A99219FE004F130E1864A427143E9FF2E 641CAC6F
+xyz.                    86400   IN      RRSIG   DS 8 1 86400 20261204050000 20261121040000 8763 . P4TaZ2iVZDirb9YS3qUf/WjymI7atEHLX4Gmc3yU5VaSceaNVjK2rx4d UE/sV0HxB49Cf3huWGUzzeJPblujwky4ed+rlrVHrtCG8Vq9UGrsTH9D ciZ6f4br7DAgWLMU48IYmXzkWO7TsKboxhYasd3b8lh9P1kHMJ+gH7rC 9XLfJJEUIXejrlm274ia4/syG0HNyRHxeFq9yr2WyaAuTscp0f79AIVY ZNs0HJqUA+Gmsg53mWM6/bD+nEOugXF4XuqWaS3SLBF6kUnI6Axi3V1R 1gVpzuStZoatEeOnJHW1U5sLa+41E69FCnNqEUkyILQefnQtjpQkXEOf FV+wRQ==
+;; Received 682 bytes from 192.203.230.10#53(e.root-servers.net) in 27 ms
+
+csc436.xyz.             3600    IN      NS      adele.ns.cloudflare.com.
+csc436.xyz.             3600    IN      NS      david.ns.cloudflare.com.
+2tjms8vm0h8n7j9e748d19gpnujm0emj.xyz. 900 IN NSEC3 1 1 0 - 2TJP5FRIV5KUA5J3R2QK9SCPC27BTDPH NS SOA RRSIG DNSKEY NSEC3PARAM
+2tjms8vm0h8n7j9e748d19gpnujm0emj.xyz. 900 IN RRSIG NSEC3 8 2 900 20261213073223 20261113060223 65206 xyz. osyL8Q4a5Hs2EDDRZIkWcrkY4hsAiw8V8TUIvMIXscHaJ7zh3tPLy5ih f8uOnJ+garfcO0VahqNZBvxm0b5L9/jblqKtokR32uNEJi9gnE4+Puxr YCNM66PhwytmYFdR8M66ndN7GHWEjIJibnFEzdDnrS8r7yKm0iRoqxcP rKU=
+vcs9usike64emq48btetiiv7o2huiffl.xyz. 900 IN NSEC3 1 1 0 - VCSPG4A5Q32LPO8FUIJV2GN1FV3DOBTI NS DS RRSIG
+vcs9usike64emq48btetiiv7o2huiffl.xyz. 900 IN RRSIG NSEC3 8 2 900 20261212091438 20261112074438 65206 xyz. eoEJWJTFkmpV41l2uKnxxn0sRuSU9kCQrOkO/CaoEZByqIiEOho5w6hG EHcW4SVq5RUKnnnb/LRb60YNV/HLq/TSGt4YXVTCvgw8+QLYxjnxqXGF ko0JJX4qD7yykj/WbecP+YSnumOpWjkTDdAWu69A6v7UDNzkbYqqw4bN oCQ=
+;; Received 613 bytes from 2a04:2b00:13ff::42#53(generationxyz.nic.xyz) in 34 ms
+
+api.csc436.xyz.         300     IN      A       104.21.61.87
+api.csc436.xyz.         300     IN      A       172.67.207.249
+;; Received 75 bytes from 108.162.194.156#53(adele.ns.cloudflare.com) in 19 ms

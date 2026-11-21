@@ -50,7 +50,7 @@ Notifications are merged by ID in `src/App.tsx`.
 
 The [frontend configuration section of the runbook](../RUNBOOK.md#frontend) documents the `VITE_` variables, defaults, and Faro configuration.  
 Vite embeds these values at build time.  
-The static host must serve `index.html` for client-side routes, including `/auth/callback`; see [frontend deployment](../RUNBOOK.md#4-build-and-deploy-the-frontend).
+The static host must serve `index.html` for client-side routes, including `/auth/callback`; see [frontend deployment](../RUNBOOK.md#5-build-and-deploy-the-frontend).
 
 Run these commands from the repository root after installing dependencies:
 

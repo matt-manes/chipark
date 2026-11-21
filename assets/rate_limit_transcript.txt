@@ -1,0 +1,167 @@
+
+Rate-limit evidence captured 2026-11-21T17:22:59.641521+00:00
+
+Configured auth limit: 5 requests per 60 seconds; global limit: 10 requests per 60 seconds.
+
+Authentication requests also consume the global allowance; a 429 on this endpoint may be caused by either limit. These requests also count toward the subsequent park test.
+
+=== Authentication request 1 ===
+POST http://127.0.0.1:8000/auth/login
+
+Request JSON: {}
+
+Response (curl --include; secrets and OAuth redirects redacted):
+HTTP/1.1 422 Unprocessable Entity
+date: Sat, 21 Nov 2026 17:22:59 GMT
+server: uvicorn
+content-length: 167
+content-type: application/json
+vary: Origin
+
+{"detail":[{"type":"missing","loc":["body","email"],"msg":"Field required","input":{}},{"type":"missing","loc":["body","password"],"msg":"Field required","input":{}}]}
+
+=== Authentication request 2 ===
+POST http://127.0.0.1:8000/auth/login
+
+Request JSON: {}
+
+Response (curl --include; secrets and OAuth redirects redacted):
+HTTP/1.1 422 Unprocessable Entity
+date: Sat, 21 Nov 2026 17:22:59 GMT
+server: uvicorn
+content-length: 167
+content-type: application/json
+vary: Origin
+
+{"detail":[{"type":"missing","loc":["body","email"],"msg":"Field required","input":{}},{"type":"missing","loc":["body","password"],"msg":"Field required","input":{}}]}
+
+=== Authentication request 3 ===
+POST http://127.0.0.1:8000/auth/login
+
+Request JSON: {}
+
+Response (curl --include; secrets and OAuth redirects redacted):
+HTTP/1.1 422 Unprocessable Entity
+date: Sat, 21 Nov 2026 17:22:59 GMT
+server: uvicorn
+content-length: 167
+content-type: application/json
+vary: Origin
+
+{"detail":[{"type":"missing","loc":["body","email"],"msg":"Field required","input":{}},{"type":"missing","loc":["body","password"],"msg":"Field required","input":{}}]}
+
+=== Authentication request 4 ===
+POST http://127.0.0.1:8000/auth/login
+
+Request JSON: {}
+
+Response (curl --include; secrets and OAuth redirects redacted):
+HTTP/1.1 422 Unprocessable Entity
+date: Sat, 21 Nov 2026 17:22:59 GMT
+server: uvicorn
+content-length: 167
+content-type: application/json
+vary: Origin
+
+{"detail":[{"type":"missing","loc":["body","email"],"msg":"Field required","input":{}},{"type":"missing","loc":["body","password"],"msg":"Field required","input":{}}]}
+
+=== Authentication request 5 ===
+POST http://127.0.0.1:8000/auth/login
+
+Request JSON: {}
+
+Response (curl --include; secrets and OAuth redirects redacted):
+HTTP/1.1 422 Unprocessable Entity
+date: Sat, 21 Nov 2026 17:22:59 GMT
+server: uvicorn
+content-length: 167
+content-type: application/json
+vary: Origin
+
+{"detail":[{"type":"missing","loc":["body","email"],"msg":"Field required","input":{}},{"type":"missing","loc":["body","password"],"msg":"Field required","input":{}}]}
+
+=== Authentication request 6 ===
+POST http://127.0.0.1:8000/auth/login
+
+Request JSON: {}
+
+Response (curl --include; secrets and OAuth redirects redacted):
+HTTP/1.1 429 Too Many Requests
+date: Sat, 21 Nov 2026 17:22:59 GMT
+server: uvicorn
+retry-after: 60
+x-ratelimit-remaining: 0
+content-length: 100
+content-type: application/json
+
+{"detail":[{"type":"http_error","loc":[],"msg":"Too many requests. Try again later.","input":null}]}
+
+Authentication endpoint returned 429 on request 6.
+
+=== Park request 1 ===
+GET http://127.0.0.1:8000/parks/1?rate_limit_evidence=a20c7eacbd234b7a78404040f83111fc
+
+Response (curl --include; secrets and OAuth redirects redacted):
+HTTP/1.1 200 OK
+date: Sat, 21 Nov 2026 17:22:59 GMT
+server: uvicorn
+content-length: 244
+content-type: application/json
+vary: Origin
+
+{"park_no":"2.0","name":"MCGUANE (JOHN)","street":"2901 S POPLAR AVE","zip_code":"60608","acres":"10.3","ward":"11","park_class":"COMMUNITY PARK","label":"McGuane","lat":41.841423592130155,"lon":-87.64816436981327,"park_id":1,"conditions":null}
+
+=== Park request 2 ===
+GET http://127.0.0.1:8000/parks/1?rate_limit_evidence=ef3d4991271d3aaf4223f39b9520966f
+
+Response (curl --include; secrets and OAuth redirects redacted):
+HTTP/1.1 200 OK
+date: Sat, 21 Nov 2026 17:22:59 GMT
+server: uvicorn
+content-length: 244
+content-type: application/json
+vary: Origin
+
+{"park_no":"2.0","name":"MCGUANE (JOHN)","street":"2901 S POPLAR AVE","zip_code":"60608","acres":"10.3","ward":"11","park_class":"COMMUNITY PARK","label":"McGuane","lat":41.841423592130155,"lon":-87.64816436981327,"park_id":1,"conditions":null}
+
+=== Park request 3 ===
+GET http://127.0.0.1:8000/parks/1?rate_limit_evidence=15ad736e528f7d43d23821952a5c3ff6
+
+Response (curl --include; secrets and OAuth redirects redacted):
+HTTP/1.1 200 OK
+date: Sat, 21 Nov 2026 17:22:59 GMT
+server: uvicorn
+content-length: 244
+content-type: application/json
+vary: Origin
+
+{"park_no":"2.0","name":"MCGUANE (JOHN)","street":"2901 S POPLAR AVE","zip_code":"60608","acres":"10.3","ward":"11","park_class":"COMMUNITY PARK","label":"McGuane","lat":41.841423592130155,"lon":-87.64816436981327,"park_id":1,"conditions":null}
+
+=== Park request 4 ===
+GET http://127.0.0.1:8000/parks/1?rate_limit_evidence=063786df5293c08135777a61026fc393
+
+Response (curl --include; secrets and OAuth redirects redacted):
+HTTP/1.1 200 OK
+date: Sat, 21 Nov 2026 17:22:59 GMT
+server: uvicorn
+content-length: 244
+content-type: application/json
+vary: Origin
+
+{"park_no":"2.0","name":"MCGUANE (JOHN)","street":"2901 S POPLAR AVE","zip_code":"60608","acres":"10.3","ward":"11","park_class":"COMMUNITY PARK","label":"McGuane","lat":41.841423592130155,"lon":-87.64816436981327,"park_id":1,"conditions":null}
+
+=== Park request 5 ===
+GET http://127.0.0.1:8000/parks/1?rate_limit_evidence=c2fd1f52f6443da129705e459f2653b7
+
+Response (curl --include; secrets and OAuth redirects redacted):
+HTTP/1.1 429 Too Many Requests
+date: Sat, 21 Nov 2026 17:22:59 GMT
+server: uvicorn
+retry-after: 60
+x-ratelimit-remaining: 0
+content-length: 100
+content-type: application/json
+
+{"detail":[{"type":"http_error","loc":[],"msg":"Too many requests. Try again later.","input":null}]}
+
+Park endpoint returned 429 on request 5.
