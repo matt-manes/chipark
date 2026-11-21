@@ -6,6 +6,7 @@ from typing import ClassVar, TypeGuard
 
 from mcp.server import MCPServer
 from mcp.server.mcpserver.context import Context
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from mcp.server.transport_security import TransportSecuritySettings
 from starlette.applications import Starlette
@@ -253,11 +254,14 @@ class ChiparkMcpServer:
 
         Raises
         ------
-        LookupError
+        ToolError
             If no park has the requested identifier.
         """
         data_service: DataService = self._require_data_service()
-        park: Park = data_service.get_park(park_id)
+        try:
+            park: Park = data_service.get_park(park_id)
+        except LookupError as error:
+            raise ToolError(str(error)) from error
         return self._park_to_result(park)
 
     def submit_ticket(
@@ -288,13 +292,13 @@ class ChiparkMcpServer:
 
         Raises
         ------
-        ValueError
+        ToolError
             If the request is unauthenticated or the park does not exist.
         """
         user: User = self._require_mcp_user(ctx)
         data_service: DataService = self._require_data_service()
         if not data_service.park_exists(park_name):
-            raise ValueError(f"Park '{park_name}' was not found.")
+            raise ToolError(f"Park '{park_name}' was not found.")
 
         ticket: Ticket = Ticket(
             park_name=park_name,
@@ -324,14 +328,15 @@ class ChiparkMcpServer:
 
         Raises
         ------
-        ValueError
-            If the caller is not an administrator or the ticket does not exist.
+        ToolError
+            If the caller is unauthenticated, not an administrator, or the ticket
+            does not exist.
         """
         self._require_mcp_admin(ctx)
         try:
             ticket: Ticket = self._require_data_service().close_ticket(ticket_id)
         except LookupError as error:
-            raise ValueError(str(error)) from error
+            raise ToolError(str(error)) from error
         return self._ticket_to_result(ticket)
 
     def edit_ticket(
@@ -364,31 +369,28 @@ class ChiparkMcpServer:
 
         Raises
         ------
-        ValueError
-            If the caller is not an administrator, the update is empty or
-            conflicting, or the ticket does not exist.
+        ToolError
+            If the caller is unauthenticated or not an administrator, the update
+            is invalid, or the ticket does not exist.
         """
         self._require_mcp_admin(ctx)
         data_service: DataService = self._require_data_service()
         updates: dict[str, object] = {}
         if estimated_hours is not None:
             if clear_estimated_hours:
-                raise ValueError(
-                    "Specify an estimated value or clear it, but not both."
-                )
+                raise ToolError("Specify an estimated value or clear it, but not both.")
             updates["estimated_hours"] = estimated_hours
         elif clear_estimated_hours:
             updates["estimated_hours"] = None
         if issue is not None:
             updates["issue"] = escape(issue)
         if not updates:
-            raise ValueError("At least one editable ticket field is required.")
+            raise ToolError("At least one editable ticket field is required.")
+        changes: TicketUpdate = TicketUpdate.model_validate(updates)
         try:
-            ticket: Ticket = data_service.update_ticket(
-                ticket_id, TicketUpdate.model_validate(updates)
-            )
-        except LookupError as error:
-            raise ValueError(str(error)) from error
+            ticket: Ticket = data_service.update_ticket(ticket_id, changes)
+        except (LookupError, ValueError) as error:
+            raise ToolError(str(error)) from error
         return self._ticket_to_result(ticket)
 
     def delete_ticket(self, ticket_id: int, ctx: Context) -> dict[str, bool]:
@@ -408,14 +410,15 @@ class ChiparkMcpServer:
 
         Raises
         ------
-        ValueError
-            If the caller is not an administrator or the ticket does not exist.
+        ToolError
+            If the caller is unauthenticated, not an administrator, or the ticket
+            does not exist.
         """
         self._require_mcp_admin(ctx)
         try:
             self._require_data_service().delete_ticket(ticket_id)
         except LookupError as error:
-            raise ValueError(str(error)) from error
+            raise ToolError(str(error)) from error
         return {"deleted": True}
 
     def _require_data_service(self) -> DataService:
@@ -455,17 +458,15 @@ class ChiparkMcpServer:
 
         Raises
         ------
-        TypeError
-            If the context does not contain an HTTP request.
-        ValueError
-            If the request has no valid bearer token.
+        ToolError
+            If the context has no HTTP request or no valid bearer token.
         """
         request: object = context.request_context.request
         if not self._is_http_request(request):
-            raise TypeError("A bearer token is required for this MCP tool.")
+            raise ToolError("A bearer token is required for this MCP tool.")
         user: User | None = AuthDependencies.optional_user(request)
         if user is None:
-            raise ValueError("A valid bearer token is required for this MCP tool.")
+            raise ToolError("A valid bearer token is required for this MCP tool.")
         return user
 
     def _require_mcp_admin(self, context: Context) -> User:
@@ -483,14 +484,12 @@ class ChiparkMcpServer:
 
         Raises
         ------
-        TypeError
-            If the context does not contain an HTTP request.
-        ValueError
+        ToolError
             If the request is unauthenticated or the account is not an admin.
         """
         user: User = self._require_mcp_user(context)
         if user.role is not UserRole.ADMIN:
-            raise ValueError("Administrator privileges are required.")
+            raise ToolError("Administrator privileges are required.")
         return user
 
     @staticmethod
