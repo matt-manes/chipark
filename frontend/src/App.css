@@ -710,7 +710,7 @@ tbody tr:hover {
   color: #aab8af;
 }
 
-.action-cell {
+.ticket-actions {
   display: flex;
   gap: 0.4rem;
 }

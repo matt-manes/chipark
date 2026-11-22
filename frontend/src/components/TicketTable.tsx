@@ -108,27 +108,29 @@ export default function TicketTable({
                 )}
                 {isAdmin && (
                   <td className="action-cell">
-                    {onEdit !== undefined && (
-                      <button type="button" onClick={() => onEdit(ticket.ticket_id)}>Edit</button>
-                    )}
-                    {ticket.status === TicketStatusValue.OPEN && onClose !== undefined && (
-                      <button
-                        type="button"
-                        disabled={updatingTicketId === ticket.ticket_id}
-                        onClick={() => onClose(ticket.ticket_id)}
-                      >
-                        Close
-                      </button>
-                    )}
-                    {ticket.status === TicketStatusValue.CLOSED && onReopen !== undefined && (
-                      <button
-                        type="button"
-                        disabled={updatingTicketId === ticket.ticket_id}
-                        onClick={() => onReopen(ticket.ticket_id)}
-                      >
-                        Reopen
-                      </button>
-                    )}
+                    <div className="ticket-actions">
+                      {onEdit !== undefined && (
+                        <button type="button" onClick={() => onEdit(ticket.ticket_id)}>Edit</button>
+                      )}
+                      {ticket.status === TicketStatusValue.OPEN && onClose !== undefined && (
+                        <button
+                          type="button"
+                          disabled={updatingTicketId === ticket.ticket_id}
+                          onClick={() => onClose(ticket.ticket_id)}
+                        >
+                          Close
+                        </button>
+                      )}
+                      {ticket.status === TicketStatusValue.CLOSED && onReopen !== undefined && (
+                        <button
+                          type="button"
+                          disabled={updatingTicketId === ticket.ticket_id}
+                          onClick={() => onReopen(ticket.ticket_id)}
+                        >
+                          Reopen
+                        </button>
+                      )}
+                    </div>
                   </td>
                 )}
               </tr>
