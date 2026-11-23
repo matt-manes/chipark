@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict'
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse
+} from 'node:http'
 import type { AddressInfo } from 'node:net'
 import test from 'node:test'
 import {
@@ -11,19 +16,58 @@ import type { TicketNotification } from '../src/api/types.ts'
 test('error formatter displays messages from multiple error details', () => {
   const error: unknown = {
     isAxiosError: true,
-    response: { data: { detail: [{ msg: 'First error' }, { msg: 'Second error' }] } }
+    response: {
+      data: { detail: [{ msg: 'First error' }, { msg: 'Second error' }] }
+    }
   }
 
   assert.equal(ApiErrorFormatter.getMessage(error), 'First error\nSecond error')
 })
 
-test('error formatter retains fallback for malformed details', () => {
-  const error: unknown = {
-    isAxiosError: true,
-    response: { data: { detail: [{ type: 'invalid' }] } }
+test('error formatter does not display malformed or serialized response details', () => {
+  for (const detail of [
+    [{ type: 'invalid', input: 'private value' }],
+    { type: 'invalid', input: 'private value' },
+    '{"detail":"private value"}',
+    [{ msg: '{"detail":"private value"}' }],
+    null,
+    ''
+  ]) {
+    const error: unknown = {
+      isAxiosError: true,
+      response: { data: { detail } }
+    }
+    assert.equal(ApiErrorFormatter.getMessage(error), 'Internal server error.')
   }
+})
 
-  assert.equal(ApiErrorFormatter.getMessage(error), '[{"type":"invalid"}]')
+test('error formatter preserves plain detail and ignores unrecognized response bodies', () => {
+  assert.equal(
+    ApiErrorFormatter.getMessage({
+      isAxiosError: true,
+      response: { data: { detail: 'Request rejected.' } }
+    }),
+    'Request rejected.'
+  )
+  assert.equal(
+    ApiErrorFormatter.getMessage({
+      isAxiosError: true,
+      message: '{"secret":true}',
+      response: { data: 'raw body' }
+    }),
+    'Internal server error.'
+  )
+  assert.equal(
+    ApiErrorFormatter.getMessage({
+      isAxiosError: true,
+      message: '{"secret":true}'
+    }),
+    'Unable to connect to the server.'
+  )
+  assert.equal(
+    ApiErrorFormatter.getMessage(new Error('{"secret":true}')),
+    'An unexpected error occurred.'
+  )
 })
 
 interface CapturedRequest {
@@ -42,7 +86,7 @@ class ApiTestServer {
   private delayParksResponse: boolean = false
   private readonly responseStatuses: Map<string, number> = new Map()
 
-  constructor() {
+  constructor () {
     this.blockedResponse = new Promise(resolve => {
       this.releaseBlockedResponse = resolve
     })
@@ -51,7 +95,7 @@ class ApiTestServer {
     })
   }
 
-  async start(): Promise<string> {
+  async start (): Promise<string> {
     await new Promise<void>((resolve, reject) => {
       this.server.once('error', reject)
       this.server.listen(0, '127.0.0.1', () => resolve())
@@ -63,7 +107,7 @@ class ApiTestServer {
     return `http://127.0.0.1:${address.port}`
   }
 
-  async close(): Promise<void> {
+  async close (): Promise<void> {
     this.releaseBlockedResponse?.()
     await new Promise<void>((resolve, reject) => {
       this.server.close(error => {
@@ -73,19 +117,19 @@ class ApiTestServer {
     })
   }
 
-  holdParkResponse(): void {
+  holdParkResponse (): void {
     this.delayParksResponse = true
   }
 
-  releaseParkResponse(): void {
+  releaseParkResponse (): void {
     this.releaseBlockedResponse?.()
   }
 
-  respondWithStatus(path: string, status: number): void {
+  respondWithStatus (path: string, status: number): void {
     this.responseStatuses.set(path, status)
   }
 
-  private async handle(
+  private async handle (
     request: IncomingMessage,
     response: ServerResponse
   ): Promise<void> {
@@ -140,7 +184,7 @@ class ApiTestServer {
     response.end(JSON.stringify(this.getResponseBody(path)))
   }
 
-  private getResponseBody(path: string): unknown {
+  private getResponseBody (path: string): unknown {
     if (path === '/auth/login' || path === '/auth/register') {
       return {
         access_token: 'issued-token',
@@ -171,7 +215,7 @@ class ApiTestServer {
   }
 }
 
-async function withApiServer(
+async function withApiServer (
   callback: (api: ChiparkApiClient, server: ApiTestServer) => Promise<void>
 ): Promise<void> {
   const server: ApiTestServer = new ApiTestServer()
@@ -202,10 +246,13 @@ test('auth and profile methods use their expected endpoints and bearer token', a
         ['POST', '/auth/logout']
       ]
     )
-    assert.equal(server.requests[0].body, JSON.stringify({
-      email: 'member@example.com',
-      password: 'password'
-    }))
+    assert.equal(
+      server.requests[0].body,
+      JSON.stringify({
+        email: 'member@example.com',
+        password: 'password'
+      })
+    )
     assert.equal(server.requests[1].authorization, 'Bearer issued-token')
     assert.equal(server.requests[2].authorization, 'Bearer issued-token')
     assert.equal(server.requests[3].authorization, 'Bearer issued-token')
@@ -276,7 +323,9 @@ test('authenticated 401 responses notify the session handler', async () => {
   await withApiServer(async (api, server) => {
     let failures: number = 0
     api.setAccessToken('revoked-token')
-    api.setAuthenticationFailureHandler(() => { failures += 1 })
+    api.setAuthenticationFailureHandler(() => {
+      failures += 1
+    })
     server.respondWithStatus('/tickets/mine', 401)
 
     await assert.rejects(api.getMyTickets())
@@ -287,7 +336,9 @@ test('authenticated 401 responses notify the session handler', async () => {
 test('401 responses without a token do not notify the session handler', async () => {
   await withApiServer(async (api, server) => {
     let failures: number = 0
-    api.setAuthenticationFailureHandler(() => { failures += 1 })
+    api.setAuthenticationFailureHandler(() => {
+      failures += 1
+    })
     server.respondWithStatus('/tickets/mine', 401)
 
     await assert.rejects(api.getMyTickets())
@@ -299,7 +350,9 @@ test('failed login does not invalidate an existing session', async () => {
   await withApiServer(async (api, server) => {
     let failures: number = 0
     api.setAccessToken('current-token')
-    api.setAuthenticationFailureHandler(() => { failures += 1 })
+    api.setAuthenticationFailureHandler(() => {
+      failures += 1
+    })
     server.respondWithStatus('/auth/login', 401)
 
     await assert.rejects(api.login('member@example.com', 'wrong-password'))
@@ -311,7 +364,9 @@ test('forbidden responses do not invalidate the session', async () => {
   await withApiServer(async (api, server) => {
     let failures: number = 0
     api.setAccessToken('current-token')
-    api.setAuthenticationFailureHandler(() => { failures += 1 })
+    api.setAuthenticationFailureHandler(() => {
+      failures += 1
+    })
     server.respondWithStatus('/admin/users', 403)
 
     await assert.rejects(api.getAdminUsers())
@@ -323,7 +378,9 @@ test('a late 401 for an old token does not invalidate a new session', async () =
   await withApiServer(async (api, server) => {
     let failures: number = 0
     api.setAccessToken('old-token')
-    api.setAuthenticationFailureHandler(() => { failures += 1 })
+    api.setAuthenticationFailureHandler(() => {
+      failures += 1
+    })
     server.holdParkResponse()
     server.respondWithStatus('/parks', 401)
     const request: Promise<unknown> = api.getParks()
@@ -342,11 +399,17 @@ test('a rejected notification stream notifies the session handler', async () => 
   await withApiServer(async (api, server) => {
     let failures: number = 0
     api.setAccessToken('revoked-token')
-    api.setAuthenticationFailureHandler(() => { failures += 1 })
+    api.setAuthenticationFailureHandler(() => {
+      failures += 1
+    })
     server.respondWithStatus('/notifications/stream', 401)
 
     await assert.rejects(
-      api.streamNotifications(new AbortController().signal, null, () => undefined),
+      api.streamNotifications(
+        new AbortController().signal,
+        null,
+        () => undefined
+      ),
       /Authentication is required/
     )
     assert.equal(failures, 1)
@@ -377,9 +440,41 @@ test('notification stream reports a missing access token', async () => {
   const api: ChiparkApiClient = new ChiparkApiClient('http://127.0.0.1')
 
   await assert.rejects(
-    api.streamNotifications(new AbortController().signal, null, () => undefined),
-    /Sign in is required/
+    api.streamNotifications(
+      new AbortController().signal,
+      null,
+      () => undefined
+    ),
+    (error: unknown) => {
+      assert.equal(
+        ApiErrorFormatter.getMessage(error),
+        'Sign in is required to receive notifications.'
+      )
+      return true
+    }
   )
+})
+
+test('notification stream reports server status without displaying the response body', async () => {
+  await withApiServer(async (api, server) => {
+    api.setAccessToken('stream-token')
+    server.respondWithStatus('/notifications/stream', 503)
+
+    await assert.rejects(
+      api.streamNotifications(
+        new AbortController().signal,
+        null,
+        () => undefined
+      ),
+      (error: unknown) => {
+        assert.equal(
+          ApiErrorFormatter.getMessage(error),
+          'Notification stream failed with status 503.'
+        )
+        return true
+      }
+    )
+  })
 })
 
 test('notification history methods load the inbox and mark an item read', async () => {

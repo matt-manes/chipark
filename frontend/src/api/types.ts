@@ -3,7 +3,8 @@ export const TicketStatusValue = {
   OPEN: 1,
   CLOSED: 2
 } as const
-export type TicketStatus = typeof TicketStatusValue[keyof typeof TicketStatusValue]
+export type TicketStatus =
+  typeof TicketStatusValue[keyof typeof TicketStatusValue]
 
 export interface User {
   user_id: number

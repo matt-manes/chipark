@@ -240,7 +240,9 @@ export class ChiparkApiClient {
     onNotification: (notification: TicketNotification) => void
   ): Promise<void> {
     if (this.accessToken === null) {
-      throw new Error('Sign in is required to receive notifications.')
+      throw new NotificationStreamError(
+        'Sign in is required to receive notifications.'
+      )
     }
 
     const headers: Record<string, string> = {
@@ -259,7 +261,7 @@ export class ChiparkApiClient {
       throw new AuthenticationRequiredError()
     }
     if (!response.ok || response.body === null) {
-      throw new Error(
+      throw new NotificationStreamError(
         `Notification stream failed with status ${response.status}.`
       )
     }
@@ -307,35 +309,48 @@ export class AuthenticationRequiredError extends Error {
   }
 }
 
+class NotificationStreamError extends Error {}
+
 export class ApiErrorFormatter {
   static isAuthenticationRequired (error: unknown): boolean {
-    return error instanceof AuthenticationRequiredError ||
+    return (
+      error instanceof AuthenticationRequiredError ||
       (axios.isAxiosError(error) && error.response?.status === 401)
+    )
   }
 
   static getMessage (error: unknown): string {
     if (axios.isAxiosError<{ detail?: unknown }>(error)) {
       const detail: unknown = error.response?.data?.detail
-      if (typeof detail === 'string') return detail
+      if (typeof detail === 'string' && this.isMessage(detail)) return detail
       if (Array.isArray(detail)) {
         const messages: string[] = detail
-          .filter((item: unknown): item is { msg: string } =>
-            typeof item === 'object' && item !== null &&
-            'msg' in item && typeof item.msg === 'string'
+          .filter(
+            (item: unknown): item is { msg: string } =>
+              typeof item === 'object' &&
+              item !== null &&
+              'msg' in item &&
+              typeof item.msg === 'string' &&
+              this.isMessage(item.msg)
           )
           .map(item => item.msg)
         if (messages.length > 0) return messages.join('\n')
       }
-      if (detail !== undefined) {
-        return (
-          JSON.stringify(detail) ?? 'The server returned invalid error details.'
-        )
-      }
-      return error.message
+      return error.response === undefined
+        ? 'Unable to connect to the server.'
+        : 'Internal server error.'
     }
-    return error instanceof Error
+    return error instanceof AuthenticationRequiredError ||
+      error instanceof NotificationStreamError
       ? error.message
       : 'An unexpected error occurred.'
+  }
+
+  private static isMessage (message: string): boolean {
+    const trimmed: string = message.trim()
+    return (
+      trimmed.length > 0 && !trimmed.startsWith('{') && !trimmed.startsWith('[')
+    )
   }
 }
 

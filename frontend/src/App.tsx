@@ -139,7 +139,7 @@ export default function App() {
           !controller.signal.aborted &&
           !ApiErrorFormatter.isAuthenticationRequired(reason)
         ) {
-          setErrorMessage(`Notification connection: ${ApiErrorFormatter.getMessage(reason)}`)
+          console.warn('Notification stream failed; retrying.', reason)
           retryTimer = window.setTimeout(() => void connectToNotifications(), 3000)
         }
       }

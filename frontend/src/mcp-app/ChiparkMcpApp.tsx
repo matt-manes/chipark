@@ -94,7 +94,7 @@ export default function ChiparkMcpApp(): ReactElement {
         if (values.some(isPark)) setParks(values.filter(isPark))
         if (values.some(isTicket)) setTickets(values.filter(isTicket))
       }
-      instance.onerror = reason => setError(reason.message)
+      instance.onerror = () => setError('The MCP connection encountered an error.')
     }
   })
 
@@ -112,9 +112,9 @@ export default function ChiparkMcpApp(): ReactElement {
         if (view === 'parks') setParks(extractToolData<Park>(result))
         if (view === 'tickets') setTickets(extractToolData<Ticket>(result))
       })
-      .catch((reason: unknown) => {
+      .catch(() => {
         if (active) {
-          setError(reason instanceof Error ? reason.message : 'The MCP request failed.')
+          setError('The MCP request failed.')
         }
       })
       .finally(() => {
@@ -138,7 +138,7 @@ export default function ChiparkMcpApp(): ReactElement {
     setRefreshVersion(version => version + 1)
   }
 
-  if (appError) return <p role="alert">MCP app error: {appError.message}</p>
+  if (appError) return <p role="alert">The MCP app could not connect.</p>
   if (!app) return <p>Connecting to Chipark...</p>
 
   return (
