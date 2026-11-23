@@ -792,6 +792,11 @@ tbody tr:hover {
   font-size: 0.8rem;
 }
 
+.field-error {
+  color: #ffaaa5;
+  font-size: 0.8rem;
+}
+
 .alert {
   display: flex;
   justify-content: space-between;

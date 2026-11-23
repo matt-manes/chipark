@@ -5,6 +5,7 @@ import {
 } from '../api/ChiparkApiClient'
 import { TicketStatusValue, type ProfileUpdate, type Ticket, type User } from '../api/types'
 import TicketTable from '../components/TicketTable'
+import ValidatedField from '../components/ValidatedField'
 
 interface ProfilePageProps {
   api: ChiparkApiClient
@@ -87,10 +88,9 @@ export default function ProfilePage({
             <div className="alert alert-info">Your account is linked to Google. Email and password changes are managed through Google.</div>
           ) : (
             <>
-              <label>
-                Email
-                <input type="email" required value={email} onChange={event => setEmail(event.target.value)} />
-              </label>
+              <ValidatedField label="Email" value={email}>
+                {validation => <input {...validation} type="email" required value={email} onChange={event => setEmail(event.target.value)} />}
+              </ValidatedField>
               <div className="form-divider" />
               <h3>Change password</h3>
               <label>
@@ -102,16 +102,18 @@ export default function ProfilePage({
                   onChange={event => setCurrentPassword(event.target.value)}
                 />
               </label>
-              <label>
-                New password
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={6}
-                  value={newPassword}
-                  onChange={event => setNewPassword(event.target.value)}
-                />
-              </label>
+              <ValidatedField label="New password" value={newPassword}>
+                {validation => (
+                  <input
+                    {...validation}
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={6}
+                    value={newPassword}
+                    onChange={event => setNewPassword(event.target.value)}
+                  />
+                )}
+              </ValidatedField>
               <p className="field-note">Leave password fields blank to keep your current password.</p>
               <button
                 className="button-primary"

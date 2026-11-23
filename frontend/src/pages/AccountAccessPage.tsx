@@ -4,6 +4,7 @@ import {
   type ChiparkApiClient
 } from '../api/ChiparkApiClient'
 import type { AuthenticatedUser } from '../api/types'
+import ValidatedField from '../components/ValidatedField'
 
 interface AccountAccessPageProps {
   api: ChiparkApiClient
@@ -61,27 +62,31 @@ export default function AccountAccessPage({
         <h2>{isRegister ? 'Create your account' : 'Sign in to ChiPark'}</h2>
         {message !== null && <div className="alert alert-info" role="status">{message}</div>}
         {error !== null && <div className="alert alert-error" role="alert">{error}</div>}
-        <label>
-          Email
-          <input
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={event => setEmail(event.target.value)}
-          />
-        </label>
-        <label>
-          Password
-          <input
-            type="password"
-            autoComplete={isRegister ? 'new-password' : 'current-password'}
-            minLength={isRegister ? 6 : undefined}
-            required
-            value={password}
-            onChange={event => setPassword(event.target.value)}
-          />
-        </label>
+        <ValidatedField label="Email" value={email}>
+          {validation => (
+            <input
+              {...validation}
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={event => setEmail(event.target.value)}
+            />
+          )}
+        </ValidatedField>
+        <ValidatedField label="Password" value={password}>
+          {validation => (
+            <input
+              {...validation}
+              type="password"
+              autoComplete={isRegister ? 'new-password' : 'current-password'}
+              minLength={isRegister ? 6 : undefined}
+              required
+              value={password}
+              onChange={event => setPassword(event.target.value)}
+            />
+          )}
+        </ValidatedField>
         <button className="button-primary auth-submit" type="submit" disabled={submitting}>
           {submitting ? 'Please wait...' : isRegister ? 'Create account' : 'Sign in'}
         </button>

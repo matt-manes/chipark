@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ApiErrorFormatter, type ChiparkApiClient } from '../api/ChiparkApiClient'
 import type { Park, User } from '../api/types'
+import ValidatedField from '../components/ValidatedField'
 
 interface SubmitTicketPageProps {
   api: ChiparkApiClient
@@ -94,81 +95,89 @@ export default function SubmitTicketPage({
       <form className="content-card form-card" onSubmit={event => void submit(event)}>
         {error !== null && <div className="alert alert-error" role="alert">{error}</div>}
         {notice !== null && <div className="alert alert-success" role="status">{notice}</div>}
-        <label>
-          Park
-          <input
-            type="text"
-            required
-            autoComplete="off"
-            value={parkName}
-            placeholder={loading ? 'Loading parks...' : 'Type to search parks'}
-            disabled={loading}
-            role="combobox"
-            aria-autocomplete="list"
-            aria-expanded={isParkListOpen}
-            aria-controls="park-name-options"
-            onFocus={() => setIsParkListOpen(true)}
-            onClick={() => setIsParkListOpen(true)}
-            onChange={event => {
-              setParkName(event.target.value)
-              setIsParkListOpen(true)
-            }}
-            onKeyDown={event => {
-              if (event.key === 'Escape') setIsParkListOpen(false)
-              if (event.key === 'Enter' && matchingParks.length > 0) {
-                event.preventDefault()
-                setParkName(matchingParks[0].name)
-                setIsParkListOpen(false)
-              }
-            }}
-            onBlur={() => {
-              window.setTimeout(() => setIsParkListOpen(false), 100)
-            }}
-          />
-          {isParkListOpen && !loading && (
-            <div className="park-picker-options" id="park-name-options" role="listbox">
-              {matchingParks.length > 0 ? matchingParks.map(park => (
-                <button
-                  type="button"
-                  key={park.park_id}
-                  role="option"
-                  aria-selected={park.name === parkName}
-                  onMouseDown={event => event.preventDefault()}
-                  onClick={() => {
-                    setParkName(park.name)
+        <ValidatedField label="Park" value={parkName}>
+          {validation => (
+            <>
+              <input
+                {...validation}
+                type="text"
+                required
+                autoComplete="off"
+                value={parkName}
+                placeholder={loading ? 'Loading parks...' : 'Type to search parks'}
+                disabled={loading}
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded={isParkListOpen}
+                aria-controls="park-name-options"
+                onFocus={() => setIsParkListOpen(true)}
+                onClick={() => setIsParkListOpen(true)}
+                onChange={event => {
+                  setParkName(event.target.value)
+                  setIsParkListOpen(true)
+                }}
+                onKeyDown={event => {
+                  if (event.key === 'Escape') setIsParkListOpen(false)
+                  if (event.key === 'Enter' && matchingParks.length > 0) {
+                    event.preventDefault()
+                    setParkName(matchingParks[0].name)
                     setIsParkListOpen(false)
-                  }}
-                >
-                  {park.name}
-                </button>
-              )) : (
-                <span className="park-picker-empty">No parks match your search.</span>
+                  }
+                }}
+                onBlur={() => {
+                  window.setTimeout(() => setIsParkListOpen(false), 100)
+                }}
+              />
+              {isParkListOpen && !loading && (
+                <div className="park-picker-options" id="park-name-options" role="listbox">
+                  {matchingParks.length > 0 ? matchingParks.map(park => (
+                    <button
+                      type="button"
+                      key={park.park_id}
+                      role="option"
+                      aria-selected={park.name === parkName}
+                      onMouseDown={event => event.preventDefault()}
+                      onClick={() => {
+                        setParkName(park.name)
+                        setIsParkListOpen(false)
+                      }}
+                    >
+                      {park.name}
+                    </button>
+                  )) : (
+                    <span className="park-picker-empty">No parks match your search.</span>
+                  )}
+                </div>
               )}
-            </div>
+            </>
           )}
-        </label>
-        <label>
-          What needs attention?
-          <textarea
-            required
-            rows={5}
-            maxLength={2000}
-            value={issue}
-            placeholder="Describe the issue and where it is in the park."
-            onChange={event => setIssue(event.target.value)}
-          />
-        </label>
-        {user.role === 'admin' && (
-          <label>
-            Estimated hours
-            <input
-              type="number"
-              min="0"
-              step="0.25"
-              value={estimatedHours}
-              onChange={event => setEstimatedHours(event.target.value)}
+        </ValidatedField>
+        <ValidatedField label="What needs attention?" value={issue}>
+          {validation => (
+            <textarea
+              {...validation}
+              required
+              rows={5}
+              maxLength={2000}
+              value={issue}
+              placeholder="Describe the issue and where it is in the park."
+              onChange={event => setIssue(event.target.value)}
             />
-          </label>
+          )}
+        </ValidatedField>
+        {user.role === 'admin' && (
+          <ValidatedField label="Estimated hours" value={estimatedHours}>
+            {validation => (
+              <input
+                {...validation}
+                type="number"
+                min="0"
+                step="0.25"
+                value={estimatedHours}
+                onChange={event => setEstimatedHours(event.target.value)}
+              />
+            )}
+          </ValidatedField>
         )}
         <div className="form-actions">
           <button type="button" onClick={onComplete}>Cancel</button>

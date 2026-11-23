@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { ApiErrorFormatter, type ChiparkApiClient } from '../api/ChiparkApiClient'
 import { TicketStatusValue, type Ticket, type TicketStatus } from '../api/types'
 import TicketSubmitter from '../components/TicketSubmitter'
+import ValidatedField from '../components/ValidatedField'
 import { useTicketSubmitters } from '../hooks/useTicketSubmitters'
 
 interface EditTicketPageProps {
@@ -97,20 +98,21 @@ export default function EditTicketPage({
       )}
       <form className="content-card form-card" onSubmit={event => void save(event)}>
         {error !== null && <div className="alert alert-error" role="alert">{error}</div>}
-        <label>
-          Issue
-          <textarea required rows={5} value={issue} onChange={event => setIssue(event.target.value)} />
-        </label>
-        <label>
-          Estimated hours
-          <input
-            type="number"
-            min="0"
-            step="0.25"
-            value={hours}
-            onChange={event => setHours(event.target.value)}
-          />
-        </label>
+        <ValidatedField label="Issue" value={issue}>
+          {validation => <textarea {...validation} required rows={5} value={issue} onChange={event => setIssue(event.target.value)} />}
+        </ValidatedField>
+        <ValidatedField label="Estimated hours" value={hours}>
+          {validation => (
+            <input
+              {...validation}
+              type="number"
+              min="0"
+              step="0.25"
+              value={hours}
+              onChange={event => setHours(event.target.value)}
+            />
+          )}
+        </ValidatedField>
         <label>
           Status
           <select value={status} onChange={event => setStatus(Number(event.target.value) as TicketStatus)}>
